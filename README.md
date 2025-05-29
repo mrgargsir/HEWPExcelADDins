@@ -42,8 +42,16 @@ Check Once if Updated Extension Available : [Click here](https://github.com/mrga
 ✔ **Quick Actions** – Shortcuts for:  
    - **🎯 Select Item** (Highlights the input field)  
    - **🆕 View Entries** (Auto-clicks the entries radio button)  
-   - **✅ DONE** (Confirms modals and resets the view)  
+   - **✅ DONE** (Confirms modals and resets the view)
+   - ** Many more**
+     
+📝 Auto Excel Upload – Instructions
+For the Auto Excel Upload feature to work:
 
+➡️ Complete all steps in the Bill Process up to selecting the HSR Item Number.
+🖱️ Then, use the upload buttons provided in the Excel Add-Ins (installed in your Excel) to trigger the automatic upload.
+
+💡 Make sure your Excel Add-In is installed and enabled before proceeding.
 ---
 
 ## **⚠️ Important Notes**  
