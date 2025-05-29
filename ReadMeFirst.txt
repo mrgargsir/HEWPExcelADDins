@@ -40,6 +40,7 @@
    - **🎯 Select Item** (Highlights the input field)  
    - **🆕 View Entries** (Auto-clicks the entries radio button)  
    - **✅ DONE** (Confirms modals and resets the view)  
+- ** Many more****
 
 📝 Auto Excel Upload – Instructions
 For the Auto Excel Upload feature to work:
@@ -58,6 +59,6 @@ For the Auto Excel Upload feature to work:
 ---
 
 ### **🎉 Ready to Use!**  
-After installation, check your **Bookmarks Bar** for the **"MRGARGSIR_Tools"** folder.  
+After installation, check your **Bookmarks Bar** for the **"Bookmarks"**.  
 
 **Thank you for using MRGARGSIR Tools!** 🚀
