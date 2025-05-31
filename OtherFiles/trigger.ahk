@@ -50,11 +50,11 @@ UploadExcel(filePath) {
 
     ; Step 7: Click "Upload"
     Click, %uploadX%, %uploadY%
-    Sleep, 7000
+    Sleep, 4000
 
     ; Step 8: Click "Copy Excel Data"
     Click, %copyX%, %copyY%
-    Sleep, 2500
+    Sleep, 2000
 
     ; Step 9: Confirm alert
     Send, {Enter}
@@ -80,18 +80,18 @@ UploadExcel(filePath) {
 
     ; Step 1: Copy item number from Excel
     WinActivate, ahk_class XLMAIN
-    Sleep, 300
+    Sleep, 100
     Send, {F2}     ; Enters edit mode
-    Sleep, 200
+    Sleep, 100
     Send, ^a       ; Select all text
-    Sleep, 200
+    Sleep, 100
     Send, ^c       ; Copy
     Sleep, 200
     Send, {Esc}
 
     itemNumber := Trim(Clipboard)
     Send, {Esc}
-    Sleep, 500
+    Sleep, 100
 
     ; Step 2: Switch to Chrome
     SetTitleMatchMode, 2
@@ -108,13 +108,13 @@ UploadExcel(filePath) {
 
     ; Step 3: Click "item"
     Click, %itemX%, %itemY%
-    Sleep, 1500
+    Sleep, 1000
 
     ; Step 4: Paste item number (Ctrl + V)
     Send, ^v
     Sleep, 800
     Send, {Enter}
-    Sleep, 3000
+    Sleep, 2000
 
   ; Step 5: Click "SET RATE"
     Click, %rateX%, %rateY%
