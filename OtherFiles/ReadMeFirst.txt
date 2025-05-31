@@ -8,8 +8,13 @@
 
 🚀 **A productivity extension for HEWP (Haryana Engineering Works Portal) automation.**  
 📌 **Developer:** **MRGARGSIR**  
-
+	
+ Check Once if Updated Extension Available : [Click here for released Version](https://github.com/mrgargsir/HEWPContractorextension/releases/latest)
+ 
+ Check Once if Updated Extension Available : [Click here for Manually Download Repo](https://github.com/mrgargsir/HEWPContractorextension)
+ 
 ---
+
 
 ## **📥 How to Install (Manual Setup)**  
 
