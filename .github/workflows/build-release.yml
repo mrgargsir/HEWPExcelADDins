@@ -19,15 +19,34 @@ jobs:
           get_highest_version() {
             V1=$1
             V2=$2
-            # Pad versions for comparison
             printf "%s\n%s" "$V1" "$V2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1
           }
 
-          FILE=$(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
-          if [ -z "$FILE" ]; then echo "No version file found." && exit 1; fi
-          echo "Found version file: $FILE"
+          FILES=$(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm')
+          if [ -z "$FILES" ]; then echo "No versioned .xlsm files found." && exit 1; fi
 
-          VERSION_RAW=$(echo "$FILE" | grep -oP 'v\K\d+(\.\d+)?(\.\d+)?')
+          HIGHEST_VERSION=""
+          BEST_FILE=""
+          for file in $FILES; do
+            VER=$(echo "$file" | grep -oP 'v\K\d+(\.\d+)?(\.\d+)?')
+            if [ -n "$VER" ]; then
+              if [ -z "$HIGHEST_VERSION" ]; then
+                HIGHEST_VERSION="$VER"
+                BEST_FILE="$file"
+              else
+                CURRENT=$(get_highest_version "$HIGHEST_VERSION" "$VER")
+                if [ "$CURRENT" = "$VER" ]; then
+                  HIGHEST_VERSION="$VER"
+                  BEST_FILE="$file"
+                fi
+              fi
+            fi
+          done
+
+          if [ -z "$BEST_FILE" ]; then echo "Could not determine best .xlsm file." && exit 1; fi
+          echo "Found version file: $BEST_FILE"
+
+          VERSION_RAW="$HIGHEST_VERSION"
           echo "Version in file: $VERSION_RAW"
 
           # Get latest release tag via GitHub CLI
@@ -52,7 +71,7 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             NEW_PATCH=$(printf "%03d" $((10#$PATCH + 1)))
             FINAL_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
-          elif echo "$CHANGED_FILES" | grep -qF "$FILE"; then
+          elif echo "$CHANGED_FILES" | grep -qF "$BEST_FILE"; then
             FINAL_VERSION="${MAJOR}.${MINOR}"
           elif echo "$CHANGED_FILES" | grep -qE '^OtherFiles/|.*'; then
             NEW_MINOR=$(printf "%02d" $((10#$MINOR + 1)))
@@ -63,14 +82,14 @@ jobs:
 
           echo "VERSION=$FINAL_VERSION" >> $GITHUB_ENV
           echo "VERSION_SHORT=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "BEST_FILE=$BEST_FILE" >> $GITHUB_ENV
 
       # Rename the .xlsm file with new version
       - name: Rename .xlsm file to match new version
         run: |
-          OLD_FILE=$(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
           NEW_FILE="MRGARGSIR-Tools-v${VERSION}.xlsm"
-          mv "$OLD_FILE" "$NEW_FILE"
-          echo "Renamed $OLD_FILE -> $NEW_FILE"
+          mv "$BEST_FILE" "$NEW_FILE"
+          echo "Renamed $BEST_FILE -> $NEW_FILE"
 
       - name: Download .zip from mrgargsir/HEWPContractorextension
         id: download_external_zip
@@ -90,7 +109,8 @@ jobs:
       - name: Create Combined ZIP
         run: |
           ZIP_NAME="HEWPTools_UtilityByMRGARGSIR_${VERSION_SHORT}.zip"
-          zip -r "$ZIP_NAME" OtherFiles "MRGARGSIR-Tools-v${VERSION}.xlsm"
+          # Zip entire repo except GitHub workflows folder
+          zip -r "$ZIP_NAME" . -x ".github/workflows/*"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
 
       - name: Get Commit Message for Release Notes
