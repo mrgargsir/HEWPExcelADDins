@@ -112,7 +112,8 @@ jobs:
         run: |
           ZIP_NAME="HEWPTools_UtilityByMRGARGSIR_${VERSION_SHORT}.zip"
           # Zip entire repo except GitHub workflows folder
-          zip -r "$ZIP_NAME" . -x ".github/workflows/*"
+          zip -r "$ZIP_NAME" . -x ".github/workflows/*" -x ".git/*" -x ".github/*"
+
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
 
       - name: Get Commit Message for Release Notes
