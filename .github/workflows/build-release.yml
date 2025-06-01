@@ -17,7 +17,11 @@ jobs:
       - name: Determine Version
         id: get_version
         run: |
-          FILE=$(find Main -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
+          FILE=$(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "❌ No version file found. Make sure a file named like MRGARGSIR-Tools-v*.xlsm exists."
+            exit 1
+          fi
           echo "Found version file: $FILE"
 
           BASE_VERSION=$(echo "$FILE" | grep -oP 'v\K\d+(\.\d+)?(\.\d+)?')
@@ -47,6 +51,7 @@ jobs:
           echo "VERSION=v$FINAL_VERSION" >> $GITHUB_ENV
           echo "VERSION_SHORT=$FINAL_VERSION" >> $GITHUB_ENV
 
+        
       # 3. Download latest release zip from external repo (No extract)
       - name: Download .zip from mrgargsir/HEWPContractorextension (No extract)
         id: download_external_zip
