@@ -10,45 +10,61 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout your repo
       - uses: actions/checkout@v4
 
-      # 2. Determine Version (smart bump logic)
+      # Determine Version (Push/Manual)
       - name: Determine Version
         id: get_version
         run: |
+          get_highest_version() {
+            V1=$1
+            V2=$2
+            # Pad versions for comparison
+            printf "%s\n%s" "$V1" "$V2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1
+          }
+
           FILE=$(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
-          if [ -z "$FILE" ]; then
-            echo "❌ No version file found."
-            exit 1
-          fi
+          if [ -z "$FILE" ]; then echo "No version file found." && exit 1; fi
           echo "Found version file: $FILE"
+
           VERSION_RAW=$(echo "$FILE" | grep -oP 'v\K\d+(\.\d+)?(\.\d+)?')
-          IFS='.' read -r MAJOR MINOR PATCH <<<"${VERSION_RAW}"
-          if [ -z "$PATCH" ]; then PATCH=0; fi
+          echo "Version in file: $VERSION_RAW"
+
+          # Get latest release tag via GitHub CLI
+          RELEASE_VERSION=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "")
+          echo "Latest GitHub Release: $RELEASE_VERSION"
+
+          if [ -z "$RELEASE_VERSION" ]; then
+            HIGH_VERSION=$VERSION_RAW
+          else
+            HIGH_VERSION=$(get_highest_version "$VERSION_RAW" "$RELEASE_VERSION")
+          fi
+
+          IFS='.' read -r MAJOR MINOR PATCH <<<"$HIGH_VERSION"
+          MAJOR=$(printf "%02d" "$MAJOR")
+          MINOR=$(printf "%02d" "$MINOR")
+          PATCH=${PATCH:-0}
+          PATCH=$(printf "%03d" "$PATCH")
+
           echo "GitHub Event: $GITHUB_EVENT_NAME"
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || true)
 
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            NEW_PATCH=$(echo "$PATCH + 0.0001" | bc -l)
-            NEW_PATCH_FORMATTED=$(printf "%.6f" "$NEW_PATCH" | sed 's/^0*//')
-            FINAL_VERSION="${MAJOR}.${MINOR}${NEW_PATCH_FORMATTED}"
+            NEW_PATCH=$(printf "%03d" $((10#$PATCH + 1)))
+            FINAL_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          elif echo "$CHANGED_FILES" | grep -qF "$FILE"; then
+            FINAL_VERSION="${MAJOR}.${MINOR}"
+          elif echo "$CHANGED_FILES" | grep -qE '^OtherFiles/|.*'; then
+            NEW_MINOR=$(printf "%02d" $((10#$MINOR + 1)))
+            FINAL_VERSION="${MAJOR}.${NEW_MINOR}"
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || true)
-            if echo "$CHANGED_FILES" | grep -qF "$FILE"; then
-              FINAL_VERSION=$VERSION_RAW
-            elif echo "$CHANGED_FILES" | grep -qE '^OtherFiles/|.*'; then
-              NEW_PATCH=$(echo "$PATCH + 0.01" | bc -l)
-              NEW_PATCH_FORMATTED=$(printf "%.2f" "$NEW_PATCH" | sed 's/^0*//')
-              FINAL_VERSION="${MAJOR}.${MINOR}${NEW_PATCH_FORMATTED}"
-            else
-              FINAL_VERSION=$VERSION_RAW
-            fi
+            FINAL_VERSION="${MAJOR}.${MINOR}"
           fi
 
           echo "VERSION=$FINAL_VERSION" >> $GITHUB_ENV
           echo "VERSION_SHORT=$FINAL_VERSION" >> $GITHUB_ENV
 
-      # 2.1 Rename .xlsm file to match new version
+      # Rename the .xlsm file with new version
       - name: Rename .xlsm file to match new version
         run: |
           OLD_FILE=$(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
@@ -56,7 +72,6 @@ jobs:
           mv "$OLD_FILE" "$NEW_FILE"
           echo "Renamed $OLD_FILE -> $NEW_FILE"
 
-      # 3. Download external ZIP (no extract)
       - name: Download .zip from mrgargsir/HEWPContractorextension
         id: download_external_zip
         uses: robinraju/release-downloader@v1.10
@@ -67,20 +82,17 @@ jobs:
           extract: false
           out-file-path: ./
 
-      # 4. Place external ZIP into OtherFiles/
       - name: Place external ZIP into OtherFiles/
         run: |
           mkdir -p OtherFiles
           cp ${{ fromJson(steps.download_external_zip.outputs.downloaded_files)[0] }} OtherFiles/
 
-      # 5. Create combined ZIP file with versioned name
       - name: Create Combined ZIP
         run: |
-          ZIP_NAME="HEWPTools&UtilityByMRGARGSIR_${VERSION_SHORT}.zip"
+          ZIP_NAME="HEWPTools_UtilityByMRGARGSIR_${VERSION_SHORT}.zip"
           zip -r "$ZIP_NAME" OtherFiles "MRGARGSIR-Tools-v${VERSION}.xlsm"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
 
-      # 6. Get latest commit message for release notes
       - name: Get Commit Message for Release Notes
         id: changelog
         run: |
@@ -89,7 +101,6 @@ jobs:
           echo "$DESC" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # 7. Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -100,7 +111,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 8. Upload ZIP artifact (optional)
       - name: Upload ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
