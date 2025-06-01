@@ -1,0 +1,93 @@
+name: Build & Release HEWP Tools
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout your repo
+      - uses: actions/checkout@v4
+
+      # 2. Determine Version (with conditional bump)
+      - name: Determine Version
+        id: get_version
+        run: |
+          FILE=$(find Main -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
+          echo "Found version file: $FILE"
+
+          BASE_VERSION=$(echo "$FILE" | grep -oP 'v\K\d+(\.\d+)?')
+          echo "Base version: $BASE_VERSION"
+
+          CHANGED=$(git diff --name-only HEAD~1 HEAD || true)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -q "$FILE"; then
+            FINAL_VERSION="$BASE_VERSION"
+            echo "Main version file was modified. Using extracted version: $FINAL_VERSION"
+          else
+            MAJOR=$(echo $BASE_VERSION | cut -d. -f1)
+            MINOR=$(echo $BASE_VERSION | cut -d. -f2)
+            if [ -z "$MINOR" ]; then MINOR=0; fi
+            MINOR=$(printf "%.0f" "$(echo "$MINOR + 1" | bc -l)")
+            FINAL_VERSION="${MAJOR}.$MINOR"
+            echo "Main version file NOT modified. Auto-bumped version to: $FINAL_VERSION"
+          fi
+
+          echo "VERSION=v$FINAL_VERSION" >> $GITHUB_ENV
+          echo "VERSION_SHORT=$FINAL_VERSION" >> $GITHUB_ENV
+
+      # 3. Download latest release zip from external repo (No extract)
+      - name: Download .zip from mrgargsir/HEWPContractorextension (No extract)
+        uses: robinraju/release-downloader@v1.10
+        with:
+          repository: mrgargsir/HEWPContractorextension
+          latest: true
+          fileName: "*.zip"
+          extract: false
+          out-file-path: ./_temp_external_release.zip
+
+      # 4. Place external ZIP inside OtherFiles/
+      - name: Place external ZIP into OtherFiles/
+        run: |
+          mkdir -p OtherFiles
+          cp ./_temp_external_release.zip ./OtherFiles/ChromeExtension_latest.zip
+
+      # 5. Create combined ZIP file with versioned name
+      - name: Create Combined ZIP
+        run: |
+          ZIP_NAME="HEWPTools&UtilityByMRGARGSIR_${VERSION_SHORT}.zip"
+          zip -r "$ZIP_NAME" Main OtherFiles
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+      # 6. Get latest commit message as release notes
+      - name: Get Commit Message for Release Notes
+        id: changelog
+        run: |
+          DESC=$(git log -1 --pretty=%B)
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "$DESC" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      # 7. Create GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: "HEWP Tools ${{ env.VERSION }}"
+          body: ${{ env.RELEASE_BODY }}
+          files: ${{ env.ZIP_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 8. Upload ZIP Artifact (optional)
+      - name: Upload ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hewp-tools-${{ env.VERSION_SHORT }}
+          path: ${{ env.ZIP_NAME }}
