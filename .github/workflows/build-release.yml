@@ -20,23 +20,28 @@ jobs:
           FILE=$(find Main -type f -name 'MRGARGSIR-Tools-v*.xlsm' | head -n 1)
           echo "Found version file: $FILE"
 
-          BASE_VERSION=$(echo "$FILE" | grep -oP 'v\K\d+(\.\d+)?')
+          BASE_VERSION=$(echo "$FILE" | grep -oP 'v\K\d+(\.\d+)?(\.\d+)?')
           echo "Base version: $BASE_VERSION"
 
-          CHANGED=$(git diff --name-only HEAD~1 HEAD || true)
-          echo "Changed files:"
-          echo "$CHANGED"
-
-          if echo "$CHANGED" | grep -q "$FILE"; then
-            FINAL_VERSION="$BASE_VERSION"
-            echo "Main version file was modified. Using extracted version: $FINAL_VERSION"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FINAL_VERSION=$(printf "%.6f" "$(echo "$BASE_VERSION + 0.000001" | bc)")
+            echo "Manually triggered. Bumped version to: $FINAL_VERSION"
           else
-            MAJOR=$(echo $BASE_VERSION | cut -d. -f1)
-            MINOR=$(echo $BASE_VERSION | cut -d. -f2)
-            if [ -z "$MINOR" ]; then MINOR=0; fi
-            MINOR=$(printf "%.0f" "$(echo "$MINOR + 1" | bc -l)")
-            FINAL_VERSION="${MAJOR}.$MINOR"
-            echo "Main version file NOT modified. Auto-bumped version to: $FINAL_VERSION"
+            CHANGED=$(git diff --name-only HEAD~1 HEAD || true)
+            echo "Changed files:"
+            echo "$CHANGED"
+
+            if echo "$CHANGED" | grep -q "$FILE"; then
+              FINAL_VERSION="$BASE_VERSION"
+              echo "Main version file was modified. Using extracted version: $FINAL_VERSION"
+            else
+              MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
+              MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
+              if [ -z "$MINOR" ]; then MINOR=0; fi
+              MINOR=$(printf "%.0f" "$(echo "$MINOR + 1" | bc)")
+              FINAL_VERSION="${MAJOR}.${MINOR}"
+              echo "Main version file NOT modified. Auto-bumped version to: $FINAL_VERSION"
+            fi
           fi
 
           echo "VERSION=v$FINAL_VERSION" >> $GITHUB_ENV
@@ -44,19 +49,20 @@ jobs:
 
       # 3. Download latest release zip from external repo (No extract)
       - name: Download .zip from mrgargsir/HEWPContractorextension (No extract)
+        id: download_external_zip
         uses: robinraju/release-downloader@v1.10
         with:
           repository: mrgargsir/HEWPContractorextension
           latest: true
           fileName: "*.zip"
           extract: false
-          out-file-path: ./_temp_external_release.zip
+          out-file-path: ./
 
-      # 4. Place external ZIP inside OtherFiles/
+      # 4. Place external ZIP inside OtherFiles/ keeping original name
       - name: Place external ZIP into OtherFiles/
         run: |
           mkdir -p OtherFiles
-          cp ./_temp_external_release.zip ./OtherFiles/ChromeExtension_latest.zip
+          cp "${{ steps.download_external_zip.outputs.downloadedFileName }}" OtherFiles/
 
       # 5. Create combined ZIP file with versioned name
       - name: Create Combined ZIP
