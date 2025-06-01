@@ -13,7 +13,7 @@ jobs:
       # 1. Checkout your repo
       - uses: actions/checkout@v4
 
-      # 2. Determine Version (with conditional bump)
+      # 2. Determine Version (smart bump logic)
       - name: Determine Version
         id: get_version
         run: |
@@ -27,32 +27,30 @@ jobs:
           BASE_VERSION=$(echo "$FILE" | grep -oP 'v\K\d+(\.\d+)?(\.\d+)?')
           echo "Base version: $BASE_VERSION"
 
+          FINAL_VERSION="$BASE_VERSION"
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            FINAL_VERSION=$(printf "%.6f" "$(echo "$BASE_VERSION + 0.000001" | bc)")
-            echo "Manually triggered. Bumped version to: $FINAL_VERSION"
+            FINAL_VERSION=$(printf "%.4f" "$(echo "$BASE_VERSION + 0.0001" | bc)")
+            echo "⚙️ Manually triggered. Bumped version to: $FINAL_VERSION"
           else
             CHANGED=$(git diff --name-only HEAD~1 HEAD || true)
             echo "Changed files:"
             echo "$CHANGED"
 
-            if echo "$CHANGED" | grep -q "$FILE"; then
-              FINAL_VERSION="$BASE_VERSION"
-              echo "Main version file was modified. Using extracted version: $FINAL_VERSION"
+            if echo "$CHANGED" | grep -qF "$FILE"; then
+              echo "✅ .xlsm file was modified. Using base version: $FINAL_VERSION"
+            elif echo "$CHANGED" | grep -qE '^OtherFiles/|^.*'; then
+              FINAL_VERSION=$(printf "%.2f" "$(echo "$BASE_VERSION + 0.01" | bc)")
+              echo "🆕 Files in OtherFiles or main branch changed. Bumped version to: $FINAL_VERSION"
             else
-              MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
-              MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
-              if [ -z "$MINOR" ]; then MINOR=0; fi
-              MINOR=$(printf "%.0f" "$(echo "$MINOR + 1" | bc)")
-              FINAL_VERSION="${MAJOR}.${MINOR}"
-              echo "Main version file NOT modified. Auto-bumped version to: $FINAL_VERSION"
+              echo "📦 No relevant changes. Keeping base version: $FINAL_VERSION"
             fi
           fi
 
           echo "VERSION=v$FINAL_VERSION" >> $GITHUB_ENV
           echo "VERSION_SHORT=$FINAL_VERSION" >> $GITHUB_ENV
 
-        
-      # 3. Download latest release zip from external repo (No extract)
+      # 3. Download latest release ZIP from external repo (no extract)
       - name: Download .zip from mrgargsir/HEWPContractorextension (No extract)
         id: download_external_zip
         uses: robinraju/release-downloader@v1.10
@@ -63,7 +61,7 @@ jobs:
           extract: false
           out-file-path: ./
 
-      # 4. Place external ZIP inside OtherFiles/ keeping original name
+      # 4. Place external ZIP into OtherFiles/ keeping original name
       - name: Place external ZIP into OtherFiles/
         run: |
           mkdir -p OtherFiles
@@ -73,10 +71,10 @@ jobs:
       - name: Create Combined ZIP
         run: |
           ZIP_NAME="HEWPTools&UtilityByMRGARGSIR_${VERSION_SHORT}.zip"
-          zip -r "$ZIP_NAME" Main OtherFiles
+          zip -r "$ZIP_NAME" OtherFiles $(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm')
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
 
-      # 6. Get latest commit message as release notes
+      # 6. Get latest commit message for release notes
       - name: Get Commit Message for Release Notes
         id: changelog
         run: |
@@ -96,7 +94,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 8. Upload ZIP Artifact (optional)
+      # 8. Upload ZIP artifact (optional)
       - name: Upload ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
