@@ -65,7 +65,8 @@ jobs:
       - name: Place external ZIP into OtherFiles/
         run: |
           mkdir -p OtherFiles
-          cp "${{ steps.download_external_zip.outputs.downloadedFileName }}" OtherFiles/
+          cp ${{ fromJson(steps.download_external_zip.outputs.downloaded_files)[0] }} OtherFiles/
+
 
       # 5. Create combined ZIP file with versioned name
       - name: Create Combined ZIP
