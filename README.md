@@ -1,6 +1,13 @@
 # HEWPExcelADDins
 HEWP EXCEL UPLOADER , CONVERTER , MB TEMPLATE, ONE CLICK INSTALLER
 
+## 📦 Download
+
+Check for Updated HEWP Tools Utility Available : [Click here for released Version](https://github.com/mrgargsir/HEWPExcelADDins/releases/latest)
+
+Check for Updated HEWP Tools Utility Available : [Click here for Manually Download Repo](https://github.com/mrgargsir/HEWPExcelADDins/)
+
+
 # 1. Open **MRGARGSIR-Tools-v*.*.xlsx and Tap install button. (Provide Permission if any asked)**
 
 # 2. Manually import ** bookmarks_5_13_25.html ** into chrome.
@@ -11,6 +18,9 @@ HEWP EXCEL UPLOADER , CONVERTER , MB TEMPLATE, ONE CLICK INSTALLER
 
 🚀 **A productivity extension for HEWP (Haryana Engineering Works Portal) automation.**  
 📌 **Developer:** **MRGARGSIR**  
+
+# There is also Chrome Extension Available
+## 📦 Download
 	
  Check Once if Updated Extension Available : [Click here for released Version](https://github.com/mrgargsir/HEWPContractorextension/releases/latest)
  
