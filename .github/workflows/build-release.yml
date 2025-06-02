@@ -101,12 +101,12 @@ jobs:
           latest: true
           fileName: "*.zip"
           extract: false
-          out-file-path: ./
+          out-file-path: ./OtherFiles/  # Download directly to target directory
 
-      - name: Place external ZIP into OtherFiles/
+      - name: Verify download
         run: |
-          mkdir -p OtherFiles
-          cp ${{ fromJson(steps.download_external_zip.outputs.downloaded_files)[0] }} OtherFiles/
+          ls -la OtherFiles/
+              # Optional verification step to ensure file was downloaded
 
       - name: Create Combined ZIP
         run: |
