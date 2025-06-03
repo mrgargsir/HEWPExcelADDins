@@ -68,7 +68,8 @@ jobs:
           PATCH=$(printf "%03d" "$PATCH")
 
           echo "GitHub Event: $GITHUB_EVENT_NAME"
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || true)
+          CHANGED_FILES=$(git diff --name-only "${{ github.event.before || 'HEAD^' }}" "${{ github.sha }}" || true)
+
 
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             NEW_PATCH=$(printf "%03d" $((10#$PATCH + 1)))
