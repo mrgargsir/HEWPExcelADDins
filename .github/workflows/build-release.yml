@@ -87,12 +87,7 @@ jobs:
           echo "VERSION_SHORT=$FINAL_VERSION" >> $GITHUB_ENV
           echo "BEST_FILE=$BEST_FILE" >> $GITHUB_ENV
 
-      # Rename the .xlsm file with new version
-      - name: Rename .xlsm file to match new version
-        run: |
-          NEW_FILE="MRGARGSIR-Tools-v${VERSION}.xlsm"
-          mv "$BEST_FILE" "$NEW_FILE"
-          echo "Renamed $BEST_FILE -> $NEW_FILE"
+    
 
       - name: Download .zip from mrgargsir/HEWPContractorextension
         id: download_external_zip
