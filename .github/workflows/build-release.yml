@@ -14,6 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Fetch full Git history (fix for HEAD^ error)
+      - name: Fetch full Git history
+        run: git fetch --unshallow || true
+
       # Determine Version (Push/Manual)
       - name: Determine Version
         id: get_version
@@ -70,8 +74,15 @@ jobs:
           PATCH=$(printf "%03d" "$PATCH")
 
           echo "GitHub Event: $GITHUB_EVENT_NAME"
-          BEFORE="${{ github.event.before || github.event.pull_request.base.sha || 'HEAD^' }}"
+          BEFORE="${{ github.event.before }}"
           AFTER="${{ github.sha }}"
+          
+          # Fallback to first commit if BEFORE is invalid
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            BEFORE=$(git rev-list --max-parents=0 HEAD | tail -n1)
+          fi
+
+          
           CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER" || true)
 
 
