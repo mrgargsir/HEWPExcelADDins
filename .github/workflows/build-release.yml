@@ -17,6 +17,8 @@ jobs:
       # Determine Version (Push/Manual)
       - name: Determine Version
         id: get_version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           get_highest_version() {
             V1=$1
@@ -137,5 +139,4 @@ jobs:
         with:
           name: hewp-tools-${{ env.VERSION_SHORT }}
           path: ${{ env.ZIP_NAME }}
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+     
