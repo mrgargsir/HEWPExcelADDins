@@ -24,19 +24,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Function to compare versions and return highest
           get_highest_version() {
             V1=$1
             V2=$2
             printf "%s\n%s" "$V1" "$V2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1
           }
 
+          # Find all MRGARGSIR Tools files with versions in name
           FILES=$(find . -type f -name 'MRGARGSIR-Tools-v*.xlsm')
           if [ -z "$FILES" ]; then echo "No versioned .xlsm files found." && exit 1; fi
 
           HIGHEST_VERSION=""
           BEST_FILE=""
           for file in $FILES; do
-            VER=$(echo "$file" | grep -oP 'v\K\d+(\.\d+)?(\.\d+)?')
+            # Extract version from filename, e.g. v2.12
+            VER=$(echo "$file" | grep -oP 'v\K\d+\.\d+')
             if [ -n "$VER" ]; then
               if [ -z "$HIGHEST_VERSION" ]; then
                 HIGHEST_VERSION="$VER"
@@ -51,57 +54,69 @@ jobs:
             fi
           done
 
-          if [ -z "$BEST_FILE" ]; then echo "Could not determine best .xlsm file." && exit 1; fi
-          echo "Found version file: $BEST_FILE"
+          echo "Found highest version file: $BEST_FILE"
+          echo "Version from filename: $HIGHEST_VERSION"
 
-          VERSION_RAW="$HIGHEST_VERSION"
-          echo "Version in file: $VERSION_RAW"
-
-          # Get latest release tag via GitHub CLI
+          # Get latest release tag (e.g. 02.12.003) from GitHub releases via CLI
           RELEASE_VERSION=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "")
           echo "Latest GitHub Release: $RELEASE_VERSION"
 
+          # Pick the highest version between filename and last release tag
           if [ -z "$RELEASE_VERSION" ]; then
-            HIGH_VERSION=$VERSION_RAW
+            HIGH_VERSION="$HIGHEST_VERSION.000"
           else
-            HIGH_VERSION=$(get_highest_version "$VERSION_RAW" "$RELEASE_VERSION")
+            HIGH_VERSION=$(get_highest_version "$HIGHEST_VERSION.000" "$RELEASE_VERSION")
           fi
 
-          IFS='.' read -r MAJOR MINOR PATCH <<<"$HIGH_VERSION"
+          # Split version parts, pad numbers
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$HIGH_VERSION"
           MAJOR=$(printf "%02d" "$MAJOR")
           MINOR=$(printf "%02d" "$MINOR")
-          PATCH=${PATCH:-0}
-          PATCH=$(printf "%03d" "$PATCH")
+          PATCH=$(printf "%03d" "${PATCH:-0}")
 
           echo "GitHub Event: $GITHUB_EVENT_NAME"
           BEFORE="${{ github.event.before }}"
           AFTER="${{ github.sha }}"
-          
-          # Fallback to first commit if BEFORE is invalid
+
+          # If BEFORE commit invalid (like first commit), fallback to root commit
           if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             BEFORE=$(git rev-list --max-parents=0 HEAD | tail -n1)
           fi
 
-          
+          # Get changed files between commits
           CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER" || true)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
 
-
+          # Check conditions:
+          # 1. Manual workflow dispatch → patch bump
+          # 2. If changed file includes BEST_FILE → use version from filename (patch=000)
+          # 3. If changed files outside .github → minor bump, patch=000
+          # 4. If only .github changed → patch bump
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            NEW_PATCH=$(printf "%03d" $((10#$PATCH + 1)))
-            FINAL_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+            PATCH=$(printf "%03d" $((10#$PATCH + 1)))
+            FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           elif echo "$CHANGED_FILES" | grep -qF "$BEST_FILE"; then
-            FINAL_VERSION="${MAJOR}.${MINOR}"
-          elif echo "$CHANGED_FILES" | grep -qE '^OtherFiles/|.*'; then
-            NEW_MINOR=$(printf "%02d" $((10#$MINOR + 1)))
-            FINAL_VERSION="${MAJOR}.${NEW_MINOR}"
+            # Use version from filename with patch = 000
+            PATCH="000"
+            FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          elif echo "$CHANGED_FILES" | grep -v '^.github/' | grep -q '.'; then
+            # Some file other than .github changed → minor bump and reset patch
+            MINOR=$(printf "%02d" $((10#$MINOR + 1)))
+            PATCH="000"
+            FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           else
-            FINAL_VERSION="${MAJOR}.${MINOR}"
+            # Only .github changed → patch bump
+            PATCH=$(printf "%03d" $((10#$PATCH + 1)))
+            FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           fi
 
-          echo "VERSION=$FINAL_VERSION" >> $GITHUB_ENV
-          echo "VERSION_SHORT=$FINAL_VERSION" >> $GITHUB_ENV
-          echo "BEST_FILE=$BEST_FILE" >> $GITHUB_ENV
+          echo "Determined version: $FINAL_VERSION"
 
+          # Export environment variables for other steps
+          echo "VERSION=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "VERSION_SHORT=${MAJOR}.${MINOR}" >> $GITHUB_ENV
+          echo "BEST_FILE=$BEST_FILE" >> $GITHUB_ENV
     
 
       - name: Download .zip from mrgargsir/HEWPContractorextension
