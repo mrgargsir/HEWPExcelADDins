@@ -68,7 +68,9 @@ jobs:
           PATCH=$(printf "%03d" "$PATCH")
 
           echo "GitHub Event: $GITHUB_EVENT_NAME"
-          CHANGED_FILES=$(git diff --name-only "${{ github.event.before || 'HEAD^' }}" "${{ github.sha }}" || true)
+          BEFORE="${{ github.event.before || github.event.pull_request.base.sha || 'HEAD^' }}"
+          AFTER="${{ github.sha }}"
+          CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER" || true)
 
 
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
@@ -135,3 +137,5 @@ jobs:
         with:
           name: hewp-tools-${{ env.VERSION_SHORT }}
           path: ${{ env.ZIP_NAME }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
