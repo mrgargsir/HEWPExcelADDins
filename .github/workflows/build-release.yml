@@ -94,7 +94,7 @@ jobs:
           # 3. If changed files outside .github → minor bump, patch=000
           # 4. If only .github changed → patch bump
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            PATCH=$(printf "%03d" $((10#$PATCH + 1)))
+            PATCH=$(printf "%03d" $((10#$PATCH + 10)))
             FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           elif echo "$CHANGED_FILES" | grep -qF "$BEST_FILE"; then
             # Use version from filename with patch = 000
@@ -102,8 +102,7 @@ jobs:
             FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           elif echo "$CHANGED_FILES" | grep -v '^.github/' | grep -q '.'; then
             # Some file other than .github changed → minor bump and reset patch
-            MINOR=$(printf "%02d" $((10#$MINOR + 1)))
-            PATCH="000"
+            PATCH=$(printf "%03d" $((10#$PATCH + 100)))
             FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           else
             # Only .github changed → patch bump
