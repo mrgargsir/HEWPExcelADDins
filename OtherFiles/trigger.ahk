@@ -11,6 +11,11 @@ copyX := 1000
 copyY := 120
 doneX := 1115
 doneY := 120
+AnnX := 1200
+AnnY := 120
+Manx := 1300
+ManY := 120
+
 
 
 ; === Upload process with item selection ===
@@ -125,4 +130,53 @@ UploadExcel(filePath) {
 
 }
 
+; === Upload pdf process  ===
+UploadPdf(filePath) {
+    global AnnX, AnnY, Manx, ManY, doneX, doneY
+    
+    ; Step 2: Switch to Chrome
+    SetTitleMatchMode, 2
+    if WinExist("Haryana Engineering Works Portal") {
+        WinActivate
+        WinWaitActive
+    } else {
+        MsgBox, 48, ERROR, Website is not open.`nPlease open it manually and then try again.
+        return
+    }
 
+    CoordMode, Mouse, Screen
+    Sleep, 300
+
+    
+
+    ; Step 5: Click "Choose ANNEX"
+    Click, %AnnX%, %AnnY%
+    Sleep, 1500
+
+    ; Step 6: File selection
+    if !FileExist(filePath) {
+        MsgBox, 48, ERROR, File not found:`n%filePath%
+        return
+    }
+    SendInput, ^a
+    Sleep, 100
+    SendInput, %filePath%
+    Sleep, 1000
+    Send, {Enter}
+    Sleep, 1000
+
+    ; Step 7: Click "aDD TO LIST"
+    Click, %Manx%, %ManY%
+    Sleep, 4000
+
+    
+    ; Step 10: Click "Done"
+    Click, %doneX%, %doneY%
+    Sleep, 800
+
+    ; Step 11: Log activity
+    FileAppend, [%A_Now%] Uploaded: %filePath% with item: %itemNumber%`n, upload_log.txt
+}
+
+; === Hotkeys to upload different Excel files ===
+^+6::UploadPdf("C:\MRGARGSIR\annex.pdf")
