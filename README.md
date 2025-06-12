@@ -11,6 +11,8 @@ Check for Updated HEWP Tools Utility Available : [Click here for Manually Downlo
 
 # 1. Open **MRGARGSIR-Tools-v*.*.xlsx and Tap install button. (Provide Permission if any asked)**
 
+Click on the Office Button -> Excel Options -> Trust Center -> Trust Center Setting -> Trusted Locations. Then you add  folder (C:\MRGARGSIR) as a trusted location.
+
 # 2. Manually import ** bookmarks_5_13_25.html ** into chrome.
 
 		OR
