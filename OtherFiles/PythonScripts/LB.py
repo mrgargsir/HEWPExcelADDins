@@ -1,28 +1,135 @@
+import os
+import sys
+import ctypes  # NEW for window management
+import time
+import subprocess
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
+import pyautogui
+import pyperclip
 import tkinter as tk
 from tkinter import Toplevel, Label, messagebox, simpledialog
-import time
-import os
-import pygetwindow as gw
-import pyperclip
+import pygetwindow as gw  # NEW for window management
 
 class HEWPUploader:
     def __init__(self):
         self.excel_file_path = r"C:\MRGARGSIR\Length_Breadth.xlsx"
         self.notification_root = None
-        self.connect_to_browser()
-    
+        self._chrome_was_launched = False  # Track if we launched Chrome
+
+        # NEW: Hide console initially (will show if needed)
+        self._hide_console()
+
+
+        # Run checks (console will show if there are issues)
+        if self._check_prerequisites():
+            self.connect_to_browser()
+            self._hide_console()  # Hide again after successful checks
+
+    def _show_console(self):
+        """Show console window"""
+        if sys.platform == 'win32':
+            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 1)
+
+    def _hide_console(self):
+        """Hide console window"""
+        if sys.platform == 'win32':
+            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+
+    def _check_prerequisites(self):
+        """Verify all requirements are met"""
+        # NEW: Show console only if we need to display messages
+        self._show_console()
+
+        print("="*50)
+        print("CHECKING PREREQUISITES")
+        print("="*50)
+        # 1. Verify packages
+        try:
+            import selenium, pyautogui, pyperclip, pygetwindow
+            print("✅ Required packages are installed")
+        except ImportError as e:
+            print(f"❌ Missing package: {str(e)}")
+            print("Please run: pip install selenium pyautogui pyperclip pygetwindow")
+            messagebox.showerror("Missing Packages", f"Please install:\nselenium\npyautogui\npyperclip\npygetwindow")
+            sys.exit(1)
+        # 2. Check Chrome debug status
+        if not self._is_chrome_running_with_debug():
+            print("⚠️ Chrome not running with debugging port")
+            if not self._launch_chrome_with_debug():
+                messagebox.showerror("Chrome Error", "Failed to launch Chrome with debugging")
+                sys.exit(1)
+            self._chrome_was_launched = True
+            
+        return True  # Return True if checks passed
+
+    def _is_chrome_running_with_debug(self):
+        """Check if Chrome is already running with debug port"""
+        try:
+            result = subprocess.run(
+                ['netstat', '-ano'],
+                capture_output=True,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            return ":9222" in result.stdout
+        except:
+            return False
+
+    def _launch_chrome_with_debug(self):
+        """Launch Chrome with remote debugging"""
+        chrome_paths = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+        ]
+        for path in chrome_paths:
+            if os.path.exists(path):
+                print(f"🚀 Launching Chrome with debugging: {path}")
+                try:
+                    subprocess.Popen([
+                        path,
+                        "--remote-debugging-port=9222",
+                        "--user-data-dir=C:\\Temp\\ChromeDebugProfile",
+                        "https://works.haryana.gov.in/HEWP_Login/login.aspx"
+                    ], creationflags=subprocess.CREATE_NO_WINDOW)
+                    time.sleep(5)
+                    return True
+                except Exception as e:
+                    print(f"Failed to launch Chrome: {str(e)}")
+                    return False
+                    
+        print("❌ Chrome not found in standard locations")
+        print("Please manually start Chrome with:")
+        print("chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Temp\\ChromeDebugProfile")
+        return False
+        sys.exit(1)
+
     def connect_to_browser(self):
         """Connect to existing Chrome browser instance"""
         chrome_options = Options()
         chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-        self.driver = webdriver.Chrome(options=chrome_options)
-        self.wait = WebDriverWait(self.driver, 20)
-        
+        print("="*50)
+        print("BROWSER CONNECTION")
+        print("="*50)
+        try:
+            self.driver = webdriver.Chrome(options=chrome_options)
+            self.wait = WebDriverWait(self.driver, 20)
+            if self._chrome_was_launched:
+                print("\n⚠️ NEW CHROME SESSION DETECTED")
+                print("Please complete login to HEWP in the Chrome window")
+                print("After login, return here and press Enter to continue...")
+                input()
+            else:
+                print("✅ Reconnected to existing Chrome session")
+            print("="*50)
+            print("STARTING AUTOMATION")
+            print("="*50)
+        except Exception as e:
+            print(f"❌ Browser connection failed: {str(e)}")
+            sys.exit(1)
 
     def ensure_window_visible(self):
         """Bring Chrome window to foreground if minimized"""
@@ -110,6 +217,19 @@ class HEWPUploader:
     def search_and_select_item(self, item_number):
         """Search and select item that contains the number"""
         try:
+            # Check if the dropdown exists first
+            try:
+                dropdown = self.wait.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "#ddlitemnumber"))
+                )
+            except Exception:
+                messagebox.showinfo(
+                    "Not Ready",
+                    "Item dropdown (ddlitemnumber) not found on page.\n\nPlease reach the destination page on website."
+                )
+                raise RuntimeError("ddlitemnumber not found on page.")
+
+            # Continue with JS for search box
             self.driver.execute_script("""
                 if (!document.getElementById('dynamicSearchContainer')) {
                     const container = document.createElement('div');
@@ -130,10 +250,7 @@ class HEWPUploader:
                 document.getElementById('dynamicSearchInput').value = arguments[0];
             """, item_number)
             
-            dropdown = self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "#ddlitemnumber"))
-            )
-            
+            # Now select the item
             for option in dropdown.find_elements(By.TAG_NAME, "option"):
                 if item_number in option.text:
                     option.click()
@@ -142,6 +259,11 @@ class HEWPUploader:
                 raise ValueError(f"Item '{item_number}' not found")
             
             time.sleep(1)
+        except RuntimeError as e:
+            # End automation if ddlitemnumber is not found
+            messagebox.showerror("Automation Stopped", str(e))
+            self.close()
+            sys.exit(1)
         except Exception as e:
             messagebox.showerror("Selection Error", f"Could not select item: {str(e)}")
             raise
@@ -342,3 +464,4 @@ def run_automation():
 
 if __name__ == "__main__":
     run_automation()
+    sys.exit(0)  # Ensures the script exits cleanly
