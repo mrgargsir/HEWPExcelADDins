@@ -121,6 +121,7 @@ Thanks! Based on your input, here’s a refined and **professional description**
 ---
 for DATA Screber 
 pip install selenium pandas openpyxl beautifulsoup4 requests
+pip install selenium pandas openpyxl webdriver-manager
 
 
 
