@@ -119,7 +119,8 @@ Thanks! Based on your input, here’s a refined and **professional description**
 * **Simple setup with zero technical skills required**
 
 ---
-
+for DATA Screber 
+pip install selenium pandas openpyxl beautifulsoup4 requests
 
 
 
