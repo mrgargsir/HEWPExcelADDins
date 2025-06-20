@@ -120,8 +120,8 @@ class HaryanaEBillingScraper:
             if self._chrome_was_launched:
                 print("\n⚠️ NEW CHROME SESSION DETECTED")
                 print("Please complete login to Haryana e-Billing in the Chrome window")
-                print("After login, return here and press Enter to continue...")
-                input()
+                print("After login, rerun script to continue...")
+                return False
             else:
                 print("✅ Reconnected to existing Chrome session")
                 

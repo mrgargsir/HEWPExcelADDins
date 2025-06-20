@@ -120,8 +120,8 @@ class HEWPUploader:
             if self._chrome_was_launched:
                 print("\n⚠️ NEW CHROME SESSION DETECTED")
                 print("Please complete login to HEWP in the Chrome window")
-                print("After login, return here and press Enter to continue...")
-                input()
+                print("After login, rerun this script to continue automation.")
+                sys.exit(1)
             else:
                 print("✅ Reconnected to existing Chrome session")
             print("="*50)
@@ -196,77 +196,6 @@ class HEWPUploader:
         # Start the event loop (this will block until the notification is closed)
         self.notification_root.mainloop()
 
-    def ask_for_item_number(self):
-        """Prompt user to enter item number (shows clipboard content as default)"""
-        try:
-            clipboard_text = pyperclip.paste()
-        except Exception:
-            clipboard_text = ""
-
-        root = tk.Tk()
-        root.withdraw()
-        item_number = simpledialog.askstring(
-            "Item Number Input",
-            "Enter the item number (can be partial):",
-            initialvalue=clipboard_text,
-            parent=root
-        )
-        root.destroy()
-        return item_number.strip() if item_number else None
-
-    def search_and_select_item(self, item_number):
-        """Search and select item that contains the number"""
-        try:
-            # Check if the dropdown exists first
-            try:
-                dropdown = self.wait.until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "#ddlitemnumber"))
-                )
-            except Exception:
-                messagebox.showinfo(
-                    "Not Ready",
-                    "Item dropdown (ddlitemnumber) not found on page.\n\nPlease reach the destination page on website."
-                )
-                raise RuntimeError("ddlitemnumber not found on page.")
-
-            # Continue with JS for search box
-            self.driver.execute_script("""
-                if (!document.getElementById('dynamicSearchContainer')) {
-                    const container = document.createElement('div');
-                    container.id = 'dynamicSearchContainer';
-                    container.style.position = 'relative';
-                    container.style.margin = '10px 0';
-                    
-                    const searchInput = document.createElement('input');
-                    searchInput.id = 'dynamicSearchInput';
-                    searchInput.type = 'text';
-                    searchInput.placeholder = '🔍 Enter item number...';
-                    searchInput.style.width = '100%';
-                    searchInput.style.padding = '8px';
-                    
-                    document.querySelector('#ddlitemnumber').parentNode.prepend(container);
-                    container.appendChild(searchInput);
-                }
-                document.getElementById('dynamicSearchInput').value = arguments[0];
-            """, item_number)
-            
-            # Now select the item
-            for option in dropdown.find_elements(By.TAG_NAME, "option"):
-                if item_number in option.text:
-                    option.click()
-                    break
-            else:
-                raise ValueError(f"Item '{item_number}' not found")
-            
-            time.sleep(1)
-        except RuntimeError as e:
-            # End automation if ddlitemnumber is not found
-            messagebox.showerror("Automation Stopped", str(e))
-            self.close()
-            sys.exit(1)
-        except Exception as e:
-            messagebox.showerror("Selection Error", f"Could not select item: {str(e)}")
-            raise
 
     def upload_file(self):
         """Selenium-only file upload approach"""
@@ -373,65 +302,10 @@ class HEWPUploader:
         except Exception as e:
             print(f"Warning during confirmation handling: {str(e)}")
 
-    def select_rate_type_with_script(self):
-        """Select Rate Type using Selenium, skip if not present, fallback to highlighting other dropdowns."""
-        from selenium.common.exceptions import NoSuchElementException, TimeoutException
-        import time
-
-
-        try:
-            # Try to find the Rate Type dropdown, skip if not found
-            try:
-                rate_type_select = self.driver.find_element(By.ID, "ddlRate_Type")
-            except NoSuchElementException:
-                # If not present, skip this step
-                print("Contracter Login, Rate_Type not found, skipping Rate Type selection.")
-                return
-
-            # Get all options
-            options = rate_type_select.find_elements(By.TAG_NAME, "option")
-            # Try to select in order of preference
-            preferred = ["Through Rate", "Rate", "Labour Rate"]
-            selected = False
-            for pref in preferred:
-                for opt in options:
-                    if opt.text.strip() == pref:
-                        opt.click()
-                        selected = True
-                        break
-                if selected:
-                    break
-
-            # If none of the preferred, select first non-default
-            if not selected:
-                for opt in options:
-                    if opt.get_attribute("value") != "Select One":
-                        opt.click()
-                        selected = True
-                        break
-
-            # Highlight the dropdown for user feedback
-            self.driver.execute_script(
-                "arguments[0].style.outline='3px solid orange'; arguments[0].style.backgroundColor='#bf360c';", 
-                rate_type_select
-            )
-            time.sleep(1)
-            self.driver.execute_script(
-                "arguments[0].style.outline=''; arguments[0].style.backgroundColor='';", 
-                rate_type_select
-            )
-
-        except Exception as e:
-            print(f"Error in select_rate_type_with_script: {e}")
-
     def process_item(self):
         """Main workflow with window management"""
         try:
-            item_number = self.ask_for_item_number()
-            if not item_number:
-                return
-            self.search_and_select_item(item_number)
-            self.select_rate_type_with_script()  # <-- Call the new function here
+           
             self.upload_file()
             self.copy_excel_data()
             
