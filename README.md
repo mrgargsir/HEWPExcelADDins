@@ -34,8 +34,8 @@ Click on the Office Button -> Excel Options -> Trust Center -> Trust Center Sett
 ## **📥 How to Install (Manual Setup)**  
 
 ### **Step 1: Extract the Extension**  
-1. Go to  **C:\MRGARGSIR\MRGARGSIR_Tools_Chrome_Extension.zip**   
-2. Extract it to **C:\MRGARGSIR\MRGARGSIR_Tools_Chrome_Extension**
+1. Go to  **"C:\MRGARGSIR\OtherFiles\ChromeExtension*.zip"**   
+2. Extract it to **"C:\MRGARGSIR\OtherFiles\ChromeExtension"**
 
 ### **Step 2: Open Chrome & Load the Extension**  
 1. Open **Google Chrome**.  
@@ -45,7 +45,7 @@ Click on the Office Button -> Excel Options -> Trust Center -> Trust Center Sett
    ```  
 3. **Enable Developer Mode** (Toggle switch on the top-right).  
 4. Click **"Load Unpacked"**.  
-5. Navigate to **`C:\MRGARGSIR\`** and select the extracted folder.  
+5. Navigate to **`C:\MRGARGSIR\OtherFiles\ChromeExtension`** and select the extracted folder.  
 6. The extension will now be installed!  
 
 ---
