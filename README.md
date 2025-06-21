@@ -34,8 +34,8 @@ Click on the Office Button -> Excel Options -> Trust Center -> Trust Center Sett
 ## **📥 How to Install (Manual Setup)**  
 
 ### **Step 1: Extract the Extension**  
-1. Go to  **"C:\MRGARGSIR\OtherFiles\ChromeExtension*.zip"**   
-2. Extract it to **"C:\MRGARGSIR\OtherFiles\ChromeExtension"**
+1. Go to  **`C:\MRGARGSIR\OtherFiles\ChromeExtension.zip`**   
+2. Extract it to **`C:\MRGARGSIR\OtherFiles\ChromeExtension`**
 
 ### **Step 2: Open Chrome & Load the Extension**  
 1. Open **Google Chrome**.  
