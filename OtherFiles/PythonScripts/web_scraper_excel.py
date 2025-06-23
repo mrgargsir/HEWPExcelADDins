@@ -96,8 +96,8 @@ class HaryanaEBillingScraper:
                         "--user-data-dir=C:\\Temp\\ChromeDebugProfile",
                         self.website_url
                     ], creationflags=subprocess.CREATE_NO_WINDOW)
-                    time.sleep(5)
-                    return True
+                    time.sleep(1)
+                    sys.exit(0)  # Exit after launching Chrome
                 except Exception as e:
                     print(f"Failed to launch Chrome: {str(e)}")
                     return False

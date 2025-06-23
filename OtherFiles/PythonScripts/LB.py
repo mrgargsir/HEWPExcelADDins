@@ -95,8 +95,8 @@ class HEWPUploader:
                         "--user-data-dir=C:\\Temp\\ChromeDebugProfile",
                         "https://works.haryana.gov.in/HEWP_Login/login.aspx"
                     ], creationflags=subprocess.CREATE_NO_WINDOW)
-                    time.sleep(5)
-                    return True
+                    time.sleep(1)
+                    sys.exit(0)  # Exit after launching Chrome
                 except Exception as e:
                     print(f"Failed to launch Chrome: {str(e)}")
                     return False
@@ -121,7 +121,7 @@ class HEWPUploader:
                 print("\n⚠️ NEW CHROME SESSION DETECTED")
                 print("Please complete login to HEWP in the Chrome window")
                 print("After login, rerun this script to continue automation.")
-                sys.exit(1)
+                sys.exit(0)
             else:
                 print("✅ Reconnected to existing Chrome session")
             print("="*50)
