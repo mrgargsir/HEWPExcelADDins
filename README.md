@@ -127,6 +127,15 @@ pip install selenium pandas openpyxl webdriver-manager
 
 pip install tqdm
 
+To auto-solve the captcha using OCR, you can use the `pytesseract` library along with `Pillow`. Here’s how you can update your `Captcha_Solver` function to use OCR and automatically fill the captcha:
+
+**1. Install dependencies (if not already):**
+```sh
+pip install pytesseract pillow requests
+```
+Also, [install Tesseract-OCR for Windows](https://github.com/tesseract-ocr/tesseract/wiki) and add its path to your system environment variables.
+
+
 
 
 **Thank you for using MRGARGSIR Tools!** 🚀
