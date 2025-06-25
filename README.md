@@ -137,6 +137,40 @@ Also, [install Tesseract-OCR for Windows](https://github.com/tesseract-ocr/tessd
 
 [https://github.com/tesseract-ocr/tesseract/releases](https://github.com/tesseract-ocr/tesseract/releases)
 
+To install **Tesseract-OCR** on Windows:
+
+1. **Download the installer:**  
+   Go to the official repo:  
+   [https://github.com/tesseract-ocr/tesseract/releases](https://github.com/tesseract-ocr/tesseract/releases)  
+   Download the latest `tesseract-ocr-w64-setup-*.exe` file.
+
+2. **Run the installer:**  
+   Double-click the `.exe` file and follow the installation steps.  
+   Note the install path (default is usually `C:\Program Files\Tesseract-OCR`).
+
+3. **(Optional but recommended) Add Tesseract to your PATH:**  
+   - Open Windows Search, type `environment variables`, and select **Edit the system environment variables**.
+   - Click **Environment Variables**.
+   - Under **System variables**, find and select `Path`, then click **Edit**.
+   - Click **New** and add:  
+     `C:\Program Files\Tesseract-OCR`
+   - Click OK to save.
+
+4. **Verify installation:**  
+   Open Command Prompt and run:
+   ```
+   tesseract --version
+   ```
+   You should see the version info.
+
+5. **Python usage:**  
+   If Tesseract is not in your PATH, set the path in your code:
+   ```python
+   import pytesseract
+   pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+   ```
+
+You’re now ready to use OCR in your Python scripts!
 
 
 
