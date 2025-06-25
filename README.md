@@ -133,7 +133,7 @@ To auto-solve the captcha using OCR, you can use the `pytesseract` library along
 ```sh
 pip install pytesseract pillow requests
 ```
-Also, [install Tesseract-OCR for Windows](https://github.com/tesseract-ocr/tesseract/wiki) and add its path to your system environment variables.
+Also, [install Tesseract-OCR for Windows](https://github.com/tesseract-ocr/tessdoc) and add its path to your system environment variables.
 
 
 
