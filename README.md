@@ -135,6 +135,8 @@ pip install pytesseract pillow requests
 ```
 Also, [install Tesseract-OCR for Windows](https://github.com/tesseract-ocr/tessdoc) and add its path to your system environment variables.
 
+[https://github.com/tesseract-ocr/tesseract/releases](https://github.com/tesseract-ocr/tesseract/releases)
+
 
 
 
