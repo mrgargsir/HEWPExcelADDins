@@ -1,73 +1,70 @@
 import os
 import sys
-import ctypes  # NEW for window management
+import ctypes
 import time
 import subprocess
+import traceback
+import tkinter as tk
+from tkinter import Toplevel, Label, messagebox, simpledialog, ttk
+
+import pyperclip
+import pygetwindow as gw
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import pyautogui
-import pyperclip
-import tkinter as tk
-from tkinter import Toplevel, Label, messagebox, simpledialog
-import pygetwindow as gw  # NEW for window management
 
-class HEWPUploader:
+class HEWPSetItem:
     def __init__(self):
-        self.excel_file_path = r"C:\MRGARGSIR\Length_Breadth_Depth.xlsx"
+        print("[INIT] Initializing HEWPSetItem...")
+        
         self.notification_root = None
-        self._chrome_was_launched = False  # Track if we launched Chrome
+        self._chrome_was_launched = False
+        self.driver = None
+        self.wait = None
 
-        # NEW: Hide console initially (will show if needed)
+        print("[INIT] Hiding console window...")
         self._hide_console()
 
-
-        # Run checks (console will show if there are issues)
+        print("[INIT] Checking prerequisites...")
         if self._check_prerequisites():
+            print("[INIT] Connecting to browser...")
             self.connect_to_browser()
-            self._hide_console()  # Hide again after successful checks
+            print("[INIT] Hiding console window again...")
+            self._hide_console()
 
     def _show_console(self):
-        """Show console window"""
+        print("[CONSOLE] Showing console window...")
         if sys.platform == 'win32':
             ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 1)
 
     def _hide_console(self):
-        """Hide console window"""
         if sys.platform == 'win32':
             ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
 
     def _check_prerequisites(self):
-        """Verify all requirements are met"""
-        # NEW: Show console only if we need to display messages
         self._show_console()
-
-        print("="*50)
-        print("CHECKING PREREQUISITES")
-        print("="*50)
-        # 1. Verify packages
+        print("[CHECK] Checking required Python packages...")
         try:
             import selenium, pyautogui, pyperclip, pygetwindow
-            print("✅ Required packages are installed")
+            print("[CHECK] ✅ Required packages are installed")
         except ImportError as e:
-            print(f"❌ Missing package: {str(e)}")
+            print(f"[CHECK] ❌ Missing package: {str(e)}")
             print("Please run: pip install selenium pyautogui pyperclip pygetwindow")
             messagebox.showerror("Missing Packages", f"Please install:\nselenium\npyautogui\npyperclip\npygetwindow")
             sys.exit(1)
-        # 2. Check Chrome debug status
+        print("[CHECK] Checking if Chrome is running with debugging port...")
         if not self._is_chrome_running_with_debug():
-            print("⚠️ Chrome not running with debugging port")
+            print("[CHECK] ⚠️ Chrome not running with debugging port")
             if not self._launch_chrome_with_debug():
                 messagebox.showerror("Chrome Error", "Failed to launch Chrome with debugging")
                 sys.exit(1)
             self._chrome_was_launched = True
-            
-        return True  # Return True if checks passed
+        return True
 
     def _is_chrome_running_with_debug(self):
-        """Check if Chrome is already running with debug port"""
+        print("[CHECK] Running netstat to check for Chrome debug port...")
         try:
             result = subprocess.run(
                 ['netstat', '-ano'],
@@ -76,18 +73,18 @@ class HEWPUploader:
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             return ":9222" in result.stdout
-        except:
+        except Exception:
             return False
 
     def _launch_chrome_with_debug(self):
-        """Launch Chrome with remote debugging"""
+        print("[CHROME] Attempting to launch Chrome with debugging...")
         chrome_paths = [
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
         ]
         for path in chrome_paths:
             if os.path.exists(path):
-                print(f"🚀 Launching Chrome with debugging: {path}")
+                print(f"[CHROME] 🚀 Launching Chrome with debugging: {path}")
                 try:
                     subprocess.Popen([
                         path,
@@ -96,43 +93,36 @@ class HEWPUploader:
                         "https://works.haryana.gov.in/HEWP_Login/login.aspx"
                     ], creationflags=subprocess.CREATE_NO_WINDOW)
                     time.sleep(1)
-                    sys.exit(0)  # Exit after launching Chrome
+                    sys.exit(0)
                 except Exception as e:
-                    print(f"Failed to launch Chrome: {str(e)}")
+                    print(f"[CHROME] Failed to launch Chrome: {str(e)}")
                     return False
-                    
-        print("❌ Chrome not found in standard locations")
+        print("[CHROME] ❌ Chrome not found in standard locations")
         print("Please manually start Chrome with:")
         print("chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Temp\\ChromeDebugProfile")
         return False
-        sys.exit(1)
 
     def connect_to_browser(self):
-        """Connect to existing Chrome browser instance"""
+        print("[BROWSER] Connecting to Chrome browser...")
         chrome_options = Options()
         chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-        print("="*50)
-        print("BROWSER CONNECTION")
-        print("="*50)
         try:
             self.driver = webdriver.Chrome(options=chrome_options)
             self.wait = WebDriverWait(self.driver, 20)
             if self._chrome_was_launched:
-                print("\n⚠️ NEW CHROME SESSION DETECTED")
+                print("[BROWSER] ⚠️ NEW CHROME SESSION DETECTED")
                 print("Please complete login to HEWP in the Chrome window")
                 print("After login, rerun this after all")
-                sys.exit(0)  # Exit after launching Chrome
+                sys.exit(0)
             else:
-                print("✅ Reconnected to existing Chrome session")
-            print("="*50)
-            print("STARTING AUTOMATION")
-            print("="*50)
+                print("[BROWSER] ✅ Reconnected to existing Chrome session")
+            print("[BROWSER] Starting automation...")
         except Exception as e:
-            print(f"❌ Browser connection failed: {str(e)}")
+            print(f"[BROWSER] ❌ Browser connection failed: {str(e)}")
             sys.exit(1)
 
     def ensure_window_visible(self):
-        """Bring Chrome window to foreground if minimized"""
+        print("[WINDOW] Ensuring Chrome window is visible...")
         try:
             chrome_windows = gw.getWindowsWithTitle("Chrome")
             if chrome_windows:
@@ -142,31 +132,22 @@ class HEWPUploader:
                 chrome_window.activate()
                 time.sleep(0.5)
         except Exception as e:
-            print(f"Window management warning: {str(e)}")
+            print(f"[WINDOW] Window management warning: {str(e)}")
 
     def show_notification(self, message, duration=3000):
-        """Show a toast-style notification that actually works"""
-        # Destroy any existing notification
+        print(f"[NOTIFY] Showing notification: {message}")
         if self.notification_root:
             try:
                 self.notification_root.destroy()
-            except:
+            except Exception:
                 pass
-
-        # Create new notification
         self.notification_root = tk.Tk()
-        self.notification_root.withdraw()  # Hide main window
-
-        # Create popup window
+        self.notification_root.withdraw()
         popup = Toplevel(self.notification_root)
         popup.wm_overrideredirect(True)
-
-        # Calculate position (top-right corner)
         x_pos = self.notification_root.winfo_screenwidth() - 320
         popup.geometry(f"300x60+{x_pos}+50")
-
-        # Style the popup
-        popup.configure(background='#4CAF50')  # Green background
+        popup.configure(background='#4CAF50')
         Label(
             popup,
             text=message,
@@ -176,150 +157,527 @@ class HEWPUploader:
             padx=20,
             pady=20
         ).pack()
-
-        # Auto-close after duration
         def close_notification():
             try:
                 popup.destroy()
                 self.notification_root.destroy()
                 self.notification_root = None
-            except:
+            except Exception:
                 pass
-
         popup.after(duration, close_notification)
-
-        # Force the window to update and show
         popup.update_idletasks()
         popup.deiconify()
         popup.lift()
-
-        # Start the event loop (this will block until the notification is closed)
         self.notification_root.mainloop()
 
     def ask_for_item_number(self):
-        """Prompt user to enter item number (shows clipboard content as default)"""
+        print("[INPUT] Asking for item number...")
         try:
             clipboard_text = pyperclip.paste()
         except Exception:
             clipboard_text = ""
-
+        item_number = clipboard_text.strip()
         root = tk.Tk()
         root.withdraw()
-        item_number = simpledialog.askstring(
-            "Item Number Input",
-            "Enter the item number (can be partial):",
-            initialvalue=clipboard_text,
-            parent=root
+        win = tk.Toplevel(root)
+        win.title("Item Number Input")
+        win.configure(bg="#f5f6fa")
+        win.resizable(False, False)
+        win.minsize(440, 200)
+        win.attributes('-topmost', True)
+        win.update_idletasks()
+        width, height = 440, 300
+        x = (win.winfo_screenwidth() // 2) - (width // 2)
+        y = (win.winfo_screenheight() // 2) - (height // 2)
+        win.geometry(f"{width}x{height}+{x}+{y}")
+        style = ttk.Style(win)
+        style.theme_use('clam')
+        style.configure("TLabel", background="#f5f6fa", font=("Segoe UI", 12, "bold"), foreground="#222")
+        style.configure("TButton", font=("Segoe UI", 11, "bold"), foreground="#fff", background="#0078D7")
+        style.map("TButton",
+                  background=[('active', '#005fa3'), ('!active', '#0078D7')],
+                  foreground=[('active', '#fff'), ('!active', '#fff')])
+        style.configure("TEntry", font=("Segoe UI", 12), padding=6)
+        label = ttk.Label(win, text="Enter the item number (can be partial):", anchor="center", style="TLabel")
+        label.pack(padx=30, pady=(30, 10), fill="x")
+        var = tk.StringVar(win)
+        var.set(item_number)
+        entry = ttk.Entry(win, textvariable=var, width=36, style="TEntry", justify="center")
+        entry.pack(padx=40, pady=10)
+        entry.focus_set()
+        result = {"value": None}
+        def on_ok(event=None):
+            result["value"] = var.get().strip()
+            win.destroy()
+            root.quit()
+        def on_cancel(event=None):
+            result["value"] = None
+            win.destroy()
+            root.quit()
+            sys.exit(0)
+        entry.bind('<Return>', on_ok)
+        win.bind('<Return>', on_ok)
+        win.bind('<Escape>', on_cancel)
+        btn_frame = tk.Frame(win, bg="#f5f6fa")
+        btn_frame.pack(side="bottom", pady=(10, 0))
+        ok_btn = ttk.Button(btn_frame, text="OK", command=on_ok, style="TButton")
+        ok_btn.pack(side="left", padx=10)
+        cancel_btn = ttk.Button(btn_frame, text="Cancel", command=on_cancel, style="TButton")
+        cancel_btn.pack(side="left", padx=10)
+        ok_btn.focus_set()
+        watermark = tk.Label(
+            win,
+            text="Developed by MRGARGSIR",
+            font=("Segoe UI", 10, "italic"),
+            fg="#b0b0b0",
+            bg="#f5f6fa",
+            anchor="center"
         )
+        watermark.pack(side="bottom", pady=(0, 10), fill="x")
+        win.protocol("WM_DELETE_WINDOW", on_cancel)
+        win.mainloop()
         root.destroy()
-        return item_number.strip() if item_number else None
+        item_number_input = result["value"]
+        print(f"[INPUT] Item number entered: {item_number_input}")
+        if not item_number_input:
+            return None
+        return item_number_input
 
-    def search_and_select_item(self, item_number):
-        """Search and select item that contains the number"""
-        try:
-            # Check if the dropdown exists first
-            try:
-                dropdown = self.wait.until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "#ddlitemnumber"))
-                )
-            except Exception:
-                messagebox.showinfo(
-                    "Not Ready",
-                    "Item dropdown (ddlitemnumber) not found on page.\n\nPlease reach the destination page on website."
-                )
-                raise RuntimeError("ddlitemnumber not found on page.")
+    def _get_valid_options(self, select_element):
+        print("[DROPDOWN] Getting valid options from dropdown...")
+        return [
+            (opt.get_attribute("value"), opt.text.strip())
+            for opt in select_element.find_elements(By.TAG_NAME, "option")
+            if opt.get_attribute("value") and opt.text.strip() and opt.text.strip().lower() != "select one"
+        ]
 
-            # Continue with JS for search box
-            self.driver.execute_script("""
-                if (!document.getElementById('dynamicSearchContainer')) {
-                    const container = document.createElement('div');
-                    container.id = 'dynamicSearchContainer';
-                    container.style.position = 'relative';
-                    container.style.margin = '10px 0';
-                    
-                    const searchInput = document.createElement('input');
-                    searchInput.id = 'dynamicSearchInput';
-                    searchInput.type = 'text';
-                    searchInput.placeholder = '🔍 Enter item number...';
-                    searchInput.style.width = '100%';
-                    searchInput.style.padding = '8px';
-                    
-                    document.querySelector('#ddlitemnumber').parentNode.prepend(container);
-                    container.appendChild(searchInput);
-                }
-                document.getElementById('dynamicSearchInput').value = arguments[0];
-            """, item_number)
-            
-            # Now select the item
-            for option in dropdown.find_elements(By.TAG_NAME, "option"):
-                if item_number in option.text:
-                    option.click()
-                    break
+    def _prompt_dropdown(self, title, prompt, options):
+        print(f"[PROMPT] Prompting user: {title} - {prompt}")
+        root = tk.Tk()
+        root.withdraw()
+        win = tk.Toplevel(root)
+        win.title(title)
+        win.configure(bg="#f5f6fa")
+        win.resizable(False, False)
+        win.minsize(700, 260)
+        win.attributes('-topmost', True)
+        win.update_idletasks()
+        width, height = 900, 400
+        x = (win.winfo_screenwidth() // 2) - (width // 2)
+        y = (win.winfo_screenheight() // 2) - (height // 2)
+        win.geometry(f"{width}x{height}+{x}+{y}")
+        style = ttk.Style(win)
+        style.theme_use('clam')
+        style.configure("TLabel", background="#f5f6fa", font=("Segoe UI", 12, "bold"), foreground="#222")
+        style.configure("TButton", font=("Segoe UI", 11, "bold"), foreground="#fff", background="#0078D7")
+        style.map("TButton",
+              background=[('active', '#005fa3'), ('!active', '#0078D7')],
+              foreground=[('active', '#fff'), ('!active', '#fff')])
+        style.configure("TCombobox", font=("Segoe UI", 11), padding=6)
+    
+    
+        # Tooltip for full text, always visible above the prompt label
+        tooltip_var = tk.StringVar()
+        tooltip = tk.Label(
+            win,
+            textvariable=tooltip_var,
+            bg="#ffffe0",
+            fg="#222",
+            font=("Segoe UI", 10),
+            relief="solid",
+            borderwidth=1,
+            wraplength=800,
+            justify="left"
+        )
+        tooltip.pack(padx=40, pady=(10, 0), fill="x")  # Pack before the prompt label
+
+        # Prompt label
+        label = ttk.Label(win, text=prompt, anchor="center", style="TLabel")
+        label.pack(padx=30, pady=(10, 10), fill="x")
+
+        # Dropdown (wider for long text)
+        var = tk.StringVar(win)
+        var.set(options[0][1])
+        combo = ttk.Combobox(
+            win,
+            textvariable=var,
+            values=[o[1] for o in options],
+            state="readonly",
+            width=60,  # Wider for long text
+            style="TCombobox"
+        )
+        combo.pack(padx=40, pady=10)
+        combo.configure(justify="left")
+        combo.current(0)
+
+        def update_tooltip(event=None):
+            idx = combo.current()
+            if idx >= 0:
+                tooltip_var.set(options[idx][1])
             else:
-                raise ValueError(f"Item '{item_number}' not found")
-            
-            time.sleep(1)
-        except RuntimeError as e:
-            # End automation if ddlitemnumber is not found
-            messagebox.showerror("Automation Stopped", str(e))
-            self.close()
-            sys.exit(1)
-        except Exception as e:
-            messagebox.showerror("Selection Error", f"Could not select item: {str(e)}")
-            raise
+                tooltip_var.set("")
+
+        combo.bind("<<ComboboxSelected>>", update_tooltip)
+        update_tooltip()
+    
+        # --- Footer: OK & Cancel Buttons at the bottom ---
+        result = {"value": None}
+        def on_ok(event=None):
+
+            idx = combo.current()
+            result["value"] = options[idx][0]  # Return the value, not the text
+            win.destroy()
+            root.quit()
+        def on_cancel(event=None):
+            result["value"] = None
+            win.destroy()
+            root.quit()
+            sys.exit(0)
+
+        # Bind Enter and Esc keys
+        win.bind('<Return>', on_ok)
+        win.bind('<Escape>', on_cancel)
+    
+        # Buttons frame
+        btn_frame = tk.Frame(win, bg="#f5f6fa")
+        btn_frame.pack(side="bottom", pady=(10, 0))
+        ok_btn = ttk.Button(btn_frame, text="OK", command=on_ok, style="TButton")
+        ok_btn.pack(side="left", padx=10)
+        cancel_btn = ttk.Button(btn_frame, text="Cancel", command=on_cancel, style="TButton")
+        cancel_btn.pack(side="left", padx=10)
+        ok_btn.focus_set()
+    
+        # Watermark / Developer signature (still at the very bottom)
+        watermark = tk.Label(
+            win,
+            text="Developed by MRGARGSIR",
+            font=("Segoe UI", 10, "italic"),
+            fg="#b0b0b0",
+            bg="#f5f6fa",
+            anchor="center"
+        )
+        watermark.pack(side="bottom", pady=(0, 10), fill="x")
+    
+        win.protocol("WM_DELETE_WINDOW", on_cancel)
+        win.mainloop()
+        root.destroy()
+        print(f"[PROMPT] User selected: {result['value']}")
+        return result["value"]
+
+    def ensure_final_date(self):
+        """If txtfinaldate field is present, ensure it has a value. Prompt user if not."""
+        try:
+            final_date_elem = self.driver.find_element(By.ID, "txtfinaldate")
+            final_date_value = final_date_elem.get_attribute("value").strip()
+            if not final_date_value:
+                root = tk.Tk()
+                root.withdraw()
+                while True:
+                    user_date = simpledialog.askstring(
+                        "Bill Final Date Required",
+                        "Enter Bill Final Date (DD/MM/YYYY):",
+                        parent=root
+                    )
+                    if user_date is None:
+                        messagebox.showerror("Input Required", "Bill Final Date is required to proceed.")
+                        continue
+                    user_date = user_date.strip()
+                    import re
+                    if re.match(r"^\d{2}/\d{2}/\d{4}$", user_date):
+                        break
+                    else:
+                        messagebox.showerror("Invalid Format", "Please enter date in DD/MM/YYYY format.")
+                root.destroy()
+                self.driver.execute_script(
+                    "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                    final_date_elem, user_date
+                )
+                time.sleep(1)
+        except Exception:
+            pass  # Field not present, nothing to do
+
 
     
+    def select_dropdowns_in_order(self, item_number=None):
+        """Ensure all required dropdowns are selected in order, prompting user if needed.
+        Only after the last dropdown, check ddlitemnumber for valid options."""
 
-    def select_rate_type_with_script(self):
-        """Select Rate Type using Selenium, skip if not present, fallback to highlighting other dropdowns."""
-        from selenium.common.exceptions import NoSuchElementException, TimeoutException
+        dropdowns = [
+            ("ddlcomp", "Main Component"),
+            ("ddlsubhead", "Sub-Component"),
+            
+        ]
+        idx = 0
+        while idx < len(dropdowns):
+            dropdown_id, label = dropdowns[idx]
+            try:
+                select_elem = self.driver.find_element(By.ID, dropdown_id)
+            except Exception:
+                idx += 1
+                continue  # If dropdown not present, skip
+
+            while True:
+                valid_options = self._get_valid_options(select_elem)
+                selected_value = select_elem.get_attribute("value")
+                try:
+                    selected_text = select_elem.find_element(By.CSS_SELECTOR, "option:checked").text.strip()
+                except Exception:
+                    selected_text = ""
+
+               
+                    time.sleep(1)
+                    # After selecting, check if next dropdown has valid options
+                    # WE CAN DELETE THIS FOR FAST RUN , ALREADY TESTED
+                    if idx + 1 < len(dropdowns):
+                        next_id, next_label = dropdowns[idx + 1]
+                        try:
+                            next_elem = self.driver.find_element(By.ID, next_id)
+                            next_valid_options = self._get_valid_options(next_elem)
+                            if not next_valid_options:
+                                continue  # Prompt again for current
+                        except Exception:
+                            continue  # Prompt again for current
+                    break  # Move to next dropdown
+
+                need_prompt = not selected_value or selected_text.lower() == "select one" or not selected_text
+                prompt_text = f"Select {label}:"
+                if need_prompt:
+                    if not valid_options:
+                        break  # No valid options to select
+                    chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                    if chosen_value:
+                        self.driver.execute_script(
+                            "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                            select_elem, chosen_value
+                        )
+                        time.sleep(1)
+                    select_elem = self.driver.find_element(By.ID, dropdown_id)
+                    continue  # Prompt again for current
+
+                # For all except last dropdown, check next dropdown for valid options
+                if idx + 1 < len(dropdowns):
+                    next_id, next_label = dropdowns[idx + 1]
+                    try:
+                        next_elem = self.driver.find_element(By.ID, next_id)
+                        next_valid_options = self._get_valid_options(next_elem)
+                        if not next_valid_options:
+                            prompt_text = f"Last selection was not valid!\nSelect {label}:"
+                            chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                            if chosen_value:
+                                self.driver.execute_script(
+                                    "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                                    select_elem, chosen_value
+                                )
+                                time.sleep(1)
+                            select_elem = self.driver.find_element(By.ID, dropdown_id)
+                            continue  # Prompt again for current
+                    except Exception:
+                        prompt_text = f"Last selection was not valid!\nSelect {label}:"
+                        chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                        if chosen_value:
+                            self.driver.execute_script(
+                                "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                                select_elem, chosen_value
+                            )
+                            time.sleep(1)
+                        select_elem = self.driver.find_element(By.ID, dropdown_id)
+                        continue  # Prompt again for current
+
+                # Only after the last dropdown, check ddlitemnumber for valid options
+                elif idx == len(dropdowns) - 1:
+                    try:
+                        rate_type_elem = self.driver.find_element(By.ID, "ddlitemnumber")
+                        rate_type_valid_options = self._get_valid_options(rate_type_elem)
+                        # --- NEW CONDITION: Only options containing item_number are valid ---
+                        if item_number:
+                            rate_type_valid_options = [
+                                (val, txt) for val, txt in rate_type_valid_options
+                                if item_number.lower() in txt.lower()
+                            ]
+                        if not rate_type_valid_options:
+                            # Prompt for previous dropdown (the current one)
+                            prompt_text = f"No matching item found!\nSelect {label} again:"
+                            chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                            if chosen_value:
+                                self.driver.execute_script(
+                                    "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                                    select_elem, chosen_value
+                                )
+                                time.sleep(1)
+                            select_elem = self.driver.find_element(By.ID, dropdown_id)
+                            continue  # Prompt again for current
+                    except Exception:
+                        prompt_text = f"Last selection was not valid!\nSelect {label}:"
+                        chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                        if chosen_value:
+                            self.driver.execute_script(
+                                "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                                select_elem, chosen_value
+                            )
+                            time.sleep(1)
+                        select_elem = self.driver.find_element(By.ID, dropdown_id)
+                        continue  # Prompt again for current
+
+                break  # Only break if all checks above pass
+            idx += 1
+
+    def search_and_select_item(self, item_number=None):
+        
+        """Select ddlitemnumber using Selenium, handling all dropdown dependencies."""
+        from selenium.common.exceptions import NoSuchElementException
         import time
+        from selenium.common.exceptions import StaleElementReferenceException
 
 
         try:
-            # Try to find the Rate Type dropdown, skip if not found
-            try:
-                rate_type_select = self.driver.find_element(By.ID, "ddlRate_Type")
-            except NoSuchElementException:
-                # If not present, skip this step
-                print("Contracter Login, Rate_Type not found, skipping Rate Type selection.")
-                return
+            # Ensure all upper dropdowns are selected
+            self.select_dropdowns_in_order(item_number)
 
-            # Get all options
-            options = rate_type_select.find_elements(By.TAG_NAME, "option")
-            # Try to select in order of preference
-            preferred = ["Through Rate", "Rate", "Labour Rate"]
-            selected = False
-            for pref in preferred:
-                for opt in options:
-                    if opt.text.strip() == pref:
-                        opt.click()
-                        selected = True
-                        break
-                if selected:
-                    break
+            # Now handle ddlitemnumber dropdown
+            while True:
+                try:
+                    # Always re-find the dropdown after any page reload
+                    rate_type_select = self.driver.find_element(By.ID, "ddlitemnumber")
+                except NoSuchElementException:
+                    print("ddlitemnumber dropdown not found, skipping ddlitemnumber selection.")
+                    return
 
-            # If none of the preferred, select first non-default
-            if not selected:
-                for opt in options:
-                    if opt.get_attribute("value") != "Select One":
-                        opt.click()
-                        selected = True
-                        break
+                try:
+                    options = self._get_valid_options(rate_type_select)
+                except StaleElementReferenceException:
+                    # If stale, re-find and retry
+                    time.sleep(1)
+                    continue
+                if not options:
+                    # No valid ddlitemnumber options, so re-run dropdown selection and try again
+                    messagebox.showinfo(
+                        "No Valid Rate Type",
+                        "No valid Rate Type options available.\nPlease reselect previous dropdowns."
+                    )
+                    self.select_dropdowns_in_order()
+                    continue  # Try again after reselection
 
-            # Highlight the dropdown for user feedback
-            self.driver.execute_script(
-                "arguments[0].style.outline='3px solid orange'; arguments[0].style.backgroundColor='#bf360c';", 
-                rate_type_select
-            )
-            time.sleep(1)
-            self.driver.execute_script(
-                "arguments[0].style.outline=''; arguments[0].style.backgroundColor='';", 
-                rate_type_select
-            )
+                # Preferred order: clipboard/user ddlitemnumber, then defaults          
+
+                selected = False
+                if item_number:
+                    # Partial match support (case-insensitive)
+                    for value, text in options:
+                        if item_number.lower() in text.lower():
+                            self.driver.execute_script(
+                                "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                                rate_type_select, value
+                            )
+                            selected = True
+                            break
+
+                # If none of the preferred, select first valid option
+                if not selected and options:
+                    self.driver.execute_script(
+                        "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                        rate_type_select, options[0][0]
+                    )
+
+                # Highlight for feedback
+                try:
+                    self.driver.execute_script(
+                        "arguments[0].style.outline='10px solid orange'; arguments[0].style.backgroundColor='#bf360c';",
+                        rate_type_select
+                    )
+                    time.sleep(1)
+                    self.driver.execute_script(
+                        "arguments[0].style.outline=''; arguments[0].style.backgroundColor='';",
+                        rate_type_select
+                    )
+                except StaleElementReferenceException:
+                    # The element was replaced after selection, so just skip highlighting
+                    pass
+                break  # Exit loop if selection was successful
 
         except Exception as e:
             print(f"Error in select_rate_type_with_script: {e}")
+            traceback.print_exc()
+    
+    
+    def ensure_subhead_selected(self):
+        """Ensure the '[Tender ID] & Agreement Name' (ddltender) dropdown is selected, prompting user if needed.
+        If not present, navigate to the correct page using menu clicks."""
+        try:
+            select_elem = self.driver.find_element(By.ID, "ddltender")
+        except Exception:
+            # Wait up to 5 seconds for the dropdown to appear before deciding we're not on the right page
+            from selenium.webdriver.support import expected_conditions as EC
+            from selenium.webdriver.common.by import By
+            from selenium.webdriver.common.action_chains import ActionChains
+            from selenium.webdriver.common.keys import Keys
+            from selenium.common.exceptions import ElementClickInterceptedException, ElementNotInteractableException, TimeoutException
+
+            try:
+                select_elem = self.wait.until(
+                    EC.presence_of_element_located((By.ID, "ddltender"))
+                )
+            except TimeoutException:
+                # Not on the right page, so navigate using menu
+                try:
+                    # 1. Click the sidebar menu: <a href="#actmenucon" ...>Submit Bill to JE</a>
+                    sidebar_links = self.driver.find_elements(By.XPATH, "//a[contains(@href, '#actmenucon') and contains(text(), 'Submit Bill to JE')]")
+                    sidebar_link = next((l for l in sidebar_links if l.is_displayed()), None)
+                    if sidebar_link:
+                        self.driver.execute_script("arguments[0].scrollIntoView();", sidebar_link)
+                        try:
+                            sidebar_link.click()
+                        except (ElementClickInterceptedException, ElementNotInteractableException):
+                            self.driver.execute_script("arguments[0].click();", sidebar_link)
+                        time.sleep(1)
+                    else:
+                        raise Exception("Sidebar 'Submit Bill to JE' menu not found.")
+
+                    # 2. Click submenu: <a ... href="/E-Billing/Est_Add_Items_emb.aspx">Submit Bill to JE</a>
+                    submenu_links = self.driver.find_elements(
+                        By.XPATH,
+                        "//ul[contains(@id, 'actmenucon')]/li/a[contains(@href, '/E-Billing/Est_Add_Items_emb.aspx') and contains(text(), 'Submit Bill to JE')]"
+                    )
+                    submenu_link = next((l for l in submenu_links if l.is_displayed()), None)
+                    if submenu_link:
+                        self.driver.execute_script("arguments[0].scrollIntoView();", submenu_link)
+                        try:
+                            submenu_link.click()
+                        except (ElementClickInterceptedException, ElementNotInteractableException):
+                            self.driver.execute_script("arguments[0].click();", submenu_link)
+                        time.sleep(2)
+                    else:
+                        raise Exception("Submenu 'Submit Bill to JE' link not found.")
+                except Exception as nav_err:
+                    messagebox.showerror("Navigation Error", f"Could not navigate to Add Items in Bill page:\n{nav_err}")
+                    raise
+                    # Wait for ddltender to appear
+                # Try again to find the dropdown after navigation
+                try:    
+                    select_elem = self.wait.until(EC.presence_of_element_located((By.ID, "ddltender")))
+                except Exception :
+                    messagebox.showerror("Navigation Error", f"Could not navigate to Add Items in Bill. Please navigate manually.")
+                    raise
+
+        # Now prompt user if not selected
+        valid_options = self._get_valid_options(select_elem)
+        selected_value = select_elem.get_attribute("value")
+        try:
+            selected_text = select_elem.find_element(By.CSS_SELECTOR, "option:checked").text.strip()
+        except Exception:
+            selected_text = ""
+
+        if not selected_value or selected_text.lower() == "select one" or not selected_text:
+            if not valid_options:
+                return  # No valid options to select
+            chosen_value = self._prompt_dropdown("[Tender ID] & Agreement Name", "Select [Tender ID] & Agreement Name:", valid_options)
+            if chosen_value:
+                self.driver.execute_script(
+                    "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
+                    select_elem, chosen_value
+                )
+                time.sleep(1)  # Wait for page reload
+
+       
 
     def process_item(self):
         """Main workflow with window management"""
@@ -327,8 +685,10 @@ class HEWPUploader:
             item_number = self.ask_for_item_number()
             if not item_number:
                 return
+            self.ensure_subhead_selected()  # Ensure ddltender is selected before item selection
+            self.ensure_final_date()  # Ensure final date is set if applicable
             self.search_and_select_item(item_number)
-            self.select_rate_type_with_script()  # <-- Call the new function here
+            
             
             return True
             
@@ -350,7 +710,7 @@ class HEWPUploader:
 
 def run_automation():
     """Run the automation process"""
-    uploader = HEWPUploader()
+    uploader = HEWPSetItem()
     try:
         uploader.process_item()
     finally:
