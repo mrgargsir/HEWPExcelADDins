@@ -252,7 +252,16 @@ class HaryanaEBillingemptytbl:
         try:
             while True:
                 try:
-                    table = self.wait.until(
+                    savecheck_btn = self.wait.until(
+                        EC.element_to_be_clickable((By.ID, "btn_Final_Save"))
+                    )
+                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", savecheck_btn)
+                except TimeoutException:
+                    print("Page not loaded properly.")
+                    break
+
+                try:
+                    table = WebDriverWait(self.driver, 0.5).until(
                         EC.presence_of_element_located((By.ID, "GV_Add_to_List_POP"))
                     )
                 except TimeoutException:
@@ -301,8 +310,15 @@ class HaryanaEBillingemptytbl:
                         print("No delete button found in this row. Table might be empty now.")
                         break
                     delete_btn = delete_btns[0]
-                    self.driver.execute_script("arguments[0].scrollIntoView(true);", delete_btn)
-                    delete_btn.click()
+                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", delete_btn)
+                    time.sleep(0.5)  # Give time for scroll/sticky header to adjust
+
+                    try:
+                        delete_btn.click()
+                    except Exception as click_err:
+                        print(f"Standard click failed, trying JS click: {click_err}")
+                        self.driver.execute_script("arguments[0].click();", delete_btn)
+                        time.sleep(0.2)
                     # Accept browser confirmation alert
                     try:
                         WebDriverWait(self.driver, 5).until(EC.alert_is_present())
@@ -324,7 +340,8 @@ class HaryanaEBillingemptytbl:
                     print(f"⚠ Error deleting row: {str(e)}")
                     break
 
-            print("All rows deleted from table.")
+            print("All rows deleted successfully.")
+            
         except Exception as e:
             print(f"⚠ Error deleting table rows: {str(e)}")
 
@@ -363,9 +380,12 @@ class HaryanaEBillingemptytbl:
                         continue
 
                     # Delete all rows in the table for this combination
+                    print(f"├─ Processing Item: {item['text']}")
                     self.delete_table()
-
+       
+        
         print("\n✔ Completed! All table rows deleted for all combinations.")
+        messagebox.showinfo("Success", "✔ Completed! All table rows deleted for all combinations.")
 
     def close(self):
         if self.driver:

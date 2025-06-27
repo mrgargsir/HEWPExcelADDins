@@ -251,9 +251,26 @@ class HaryanaEBillingScraper:
     def extract_table_data(self):
         """Extract all data from the main table"""
         try:
-            table = self.wait.until(
-                EC.presence_of_element_located((By.ID, "GV_Add_to_List_POP"))
-            )
+            try:
+                savecheck_btn = self.wait.until(
+                    EC.element_to_be_clickable((By.ID, "btn_Final_Save"))
+                )
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", savecheck_btn)
+            except TimeoutException:
+                print("Page not loaded properly.")
+                return []
+
+            try:
+                table = WebDriverWait(self.driver, 0.5).until(
+                    EC.presence_of_element_located((By.ID, "GV_Add_to_List_POP"))
+                )
+            except TimeoutException:
+                print("Table not found. Assuming all rows blanks.")
+                return []
+            
+            # Scroll to the table to ensure it's loaded
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", table)
+            time.sleep(0.5)  # Allow time for table to render
             rows = table.find_elements(By.TAG_NAME, "tr")
             
             # Skip header and footer rows
