@@ -14,6 +14,14 @@ import pyautogui
 import pyperclip
 from tkinter import messagebox
 import pygetwindow as gw
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import ElementClickInterceptedException, ElementNotInteractableException, TimeoutException
 
 class HEWPUploader:
     def __init__(self):
@@ -714,27 +722,41 @@ class HEWPUploader:
     def ensure_subhead_selected(self):
         """Ensure the 'Name of Template' (ddlsubhead) dropdown is selected, prompting user if needed.
         If not present, navigate to the correct page using menu clicks."""
+
+        # Ensure page is loaded and user is logged in
+        print("[CHECK] Ensuring user is logged in and on the correct page...")
+        user_elem = WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.ID, "lblusername"))
+        )
+        # Ensure user is logged in by checking for the username label
+        print("[CHECK] Checking if user is logged in...")
+        try:
+            user_elem = self.driver.find_element(By.ID, "lblusername")
+            username = user_elem.text.strip()
+            if not username:
+                raise Exception("User not logged in or username not found.")
+            else:
+                print(f"[CHECK] User '{username}' is logged in.")
+        except Exception:
+            messagebox.showerror("Login Error", "You are not logged in. Please login first.")
+            raise
+        print(f"[CHECK] User '{username}' is logged in.")
+
         try:
             select_elem = self.driver.find_element(By.ID, "ddlsubhead")
         except Exception:
             # Wait up to 5 seconds for the dropdown to appear before deciding we're not on the right page
-            from selenium.webdriver.support import expected_conditions as EC
-            from selenium.webdriver.common.by import By
-            from selenium.common.exceptions import TimeoutException
-
+            
             try:
-                select_elem = self.wait.until(
+                select_elem = WebDriverWait(self.driver, 0.5).until(
                     EC.presence_of_element_located((By.ID, "ddlsubhead"))
                 )
             except TimeoutException:
                 # Not on the right page, so navigate using menu
-                try:
-                    from selenium.webdriver.support import expected_conditions as EC
-                    from selenium.webdriver.common.by import By
-                    from selenium.webdriver.common.action_chains import ActionChains
-                    from selenium.webdriver.common.keys import Keys
-                    from selenium.common.exceptions import ElementClickInterceptedException, ElementNotInteractableException, TimeoutException
+                print("[NAVIGATION] Not on the Add/Edit Items page, navigating...")
 
+                try:
+                    self.ensure_window_visible()  # Ensure Chrome window is visible
                     # 1. Click the visible "e-Estimate" menu (find the one that's displayed)
                     e_estimate_links = self.driver.find_elements(By.XPATH, "//a[@id='HyperLink7' and contains(text(),'e-Estimate')]")
                     e_estimate = None
