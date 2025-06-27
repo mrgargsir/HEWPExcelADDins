@@ -22,6 +22,9 @@ import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Alignment, Font
 import re
+import ctypes
+import subprocess
+import importlib.util
 
 
 class HaryanaEBillingemptytbl:
@@ -33,43 +36,66 @@ class HaryanaEBillingemptytbl:
         self.wait_time = 15
         self.max_retries = 3
         self._chrome_was_launched = False
+        self.notification_root = None
+
+        self._hide_console()
+
+        print("[1/5] Checking prerequisites...")
+        if self._check_prerequisites():
+            print("[INIT] Prerequisites OK. Connecting to browser...")
+            print("[2/5] Connecting to browser...")
+            self.connect_to_browser()
+            self._hide_console()
 
     def _show_console(self):
-        """Ensure console window is visible"""
         if sys.platform == 'win32':
-            import ctypes
+            print("[CONSOLE] Showing console window.")
             ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 1)
+
+    def _hide_console(self):
+        if sys.platform == 'win32':
+            print("[CONSOLE] Hiding console window.")
+            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
 
     def _check_prerequisites(self):
         """Verify all requirements are met"""
-        self._show_console()
-
+        print("[CHECK] Checking prerequisites...")
+        
         print("="*50)
         print("CHECKING PREREQUISITES")
         print("="*50)
-        
-        # 1. Verify packages
-        try:
-            import selenium, pyautogui, pyperclip, pygetwindow
-            print("✅ Required packages are installed")
-        except ImportError as e:
-            print(f"❌ Missing package: {str(e)}")
-            print("Please run: pip install selenium pyautogui pyperclip pygetwindow")
-            messagebox.showerror("Missing Packages", f"Please install:\nselenium\npyautogui\npyperclip\npygetwindow")
+
+        required_modules = [
+            "selenium", "pyautogui", "pyperclip", "pygetwindow", "tkinter"
+        ]
+        missing = []
+        for mod in required_modules:
+            if importlib.util.find_spec(mod) is None:
+                missing.append(mod)
+        if missing:
+            print(f"❌ Missing packages: {', '.join(missing)}")
+            print(f"Please run: pip install {' '.join(missing)}")
+            messagebox.showerror("Missing Packages", f"Please install:\n" + "\n".join(missing))
             sys.exit(1)
-            
-        # 2. Check Chrome debug status
+        else:
+            print("✅ All required Python packages are installed.")
+
+        
+        # Check Chrome debug status
         if not self._is_chrome_running_with_debug():
             print("⚠️ Chrome not running with debugging port")
             if not self._launch_chrome_with_debug():
                 messagebox.showerror("Chrome Error", "Failed to launch Chrome with debugging")
                 sys.exit(1)
             self._chrome_was_launched = True
-            
+        else:
+            print("✅ Chrome is running with debugging port.")
         return True
 
     def _is_chrome_running_with_debug(self):
-        """Check if Chrome is already running with debug port"""
+        """Check if Chrome is running with debug port and is a chrome.exe process.
+        If port is open but not by chrome.exe, kill the process and exit."""
+        print("[CHECK] Checking if Chrome is running with debug port...")
         try:
             result = subprocess.run(
                 ['netstat', '-ano'],
@@ -77,12 +103,40 @@ class HaryanaEBillingemptytbl:
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            return ":9222" in result.stdout
-        except:
+            lines = result.stdout.splitlines()
+            for line in lines:
+                if ":9222" in line and "LISTENING" in line:
+                    parts = line.split()
+                    pid = parts[-1]
+                    # Now check if this PID is a Chrome process
+                    tasklist = subprocess.run(
+                        ['tasklist', '/FI', f'PID eq {pid}'],
+                        capture_output=True,
+                        text=True,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    if "chrome.exe" in tasklist.stdout.lower():
+                        print(f"[CHECK] Chrome debug port found and process is chrome.exe (PID {pid})")
+                        return True
+                    else:
+                        print(f"[CHECK] Port 9222 is open but not used by chrome.exe (PID {pid})")
+                        # Try to kill the process using the port
+                        try:
+                            subprocess.run(['taskkill', '/PID', pid, '/F'], creationflags=subprocess.CREATE_NO_WINDOW)
+                            print(f"[CHECK] Killed process PID {pid} using port 9222.")
+                        except Exception as kill_err:
+                            print(f"[CHECK] Failed to kill process PID {pid}: {kill_err}")
+                        print("[CHECK] Exiting script due to invalid debug port usage.")
+                        import sys
+                        sys.exit(1)
+            print("[CHECK] Chrome debug port not found or not a Chrome process.")
+            return False
+        except Exception as e:
+            print(f"[CHECK] Error checking Chrome debug port: {e}")
             return False
 
     def _launch_chrome_with_debug(self):
-        """Launch Chrome with remote debugging"""
+        print("[LAUNCH] Attempting to launch Chrome with debugging...")
         chrome_paths = [
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
@@ -95,14 +149,15 @@ class HaryanaEBillingemptytbl:
                         path,
                         "--remote-debugging-port=9222",
                         "--user-data-dir=C:\\Temp\\ChromeDebugProfile",
-                        self.website_url
+                        "https://works.haryana.gov.in/HEWP_Login/login.aspx"
                     ], creationflags=subprocess.CREATE_NO_WINDOW)
-                    time.sleep(1)
-                    sys.exit(0)  # Exit after launching Chrome
+                    time.sleep(0.2)
+                    print("[LAUNCH] Chrome launched. Please login and rerun script.")
+                    sys.exit(0)
                 except Exception as e:
                     print(f"Failed to launch Chrome: {str(e)}")
                     return False
-                    
+
         print("❌ Chrome not found in standard locations")
         print("Please manually start Chrome with:")
         print("chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Temp\\ChromeDebugProfile")
@@ -110,50 +165,46 @@ class HaryanaEBillingemptytbl:
 
     def connect_to_browser(self):
         """Connect to existing Chrome browser instance"""
+        print("[BROWSER] Connecting to Chrome browser...")
         chrome_options = Options()
         chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-        
         print("="*50)
         print("BROWSER CONNECTION")
         print("="*50)
-        
         try:
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            self.wait = WebDriverWait(self.driver, self.wait_time)
-            
+            self.driver = webdriver.Chrome(options=chrome_options)
+            self.wait = WebDriverWait(self.driver, 20)
             if self._chrome_was_launched:
                 print("\n⚠️ NEW CHROME SESSION DETECTED")
-                print("Please complete login to Haryana e-Billing in the Chrome window")
-                print("After login, rerun script to continue...")
-                sys.exit(0)  # Exit gracefully, no error
+                print("Please complete login to HEWP in the Chrome window")
+                print("After login, rerun this script to continue automation.")
+                sys.exit(0)
             else:
                 print("✅ Reconnected to existing Chrome session")
-                
             print("="*50)
             print("STARTING AUTOMATION")
             print("="*50)
-            return True
-            
         except Exception as e:
             print(f"❌ Browser connection failed: {str(e)}")
-            return False
+            sys.exit(1)
 
     def ensure_window_visible(self):
         """Bring Chrome window to foreground if minimized"""
+        print("[WINDOW] Ensuring Chrome window is visible...")
         try:
             chrome_windows = gw.getWindowsWithTitle("Chrome")
             if chrome_windows:
                 chrome_window = chrome_windows[0]
                 if chrome_window.isMinimized:
+                    print("[WINDOW] Restoring minimized Chrome window.")
                     chrome_window.restore()
                 chrome_window.activate()
+                print("[WINDOW] Chrome window activated.")
                 time.sleep(0.5)
-                return True
+            else:
+                print("[WINDOW] No Chrome window found.")
         except Exception as e:
             print(f"Window management warning: {str(e)}")
-        return False
-
 
     def get_dropdown_options(self, dropdown_id):
         """Get all non-empty, non-placeholder options from a dropdown"""
@@ -318,7 +369,8 @@ class HaryanaEBillingemptytbl:
 
     def close(self):
         if self.driver:
-            self.driver.quit()
+            # self.driver.quit()
+            pass
 
 def ask_delete_mode():
     """Premium dialog for delete mode selection with watermark and centered window."""
@@ -414,14 +466,8 @@ def main():
     )
     
     try:
-        print("[1/5] Checking prerequisites...")
-        if not emptytbl._check_prerequisites():
-            return
         
-        print("[2/5] Connecting to browser...")
-        if not emptytbl.connect_to_browser():
-            return
-            
+   
         print("[3/5] Ensuring window visibility...")
         emptytbl.ensure_window_visible()
 

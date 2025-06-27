@@ -3,9 +3,11 @@ import sys
 import ctypes
 import time
 import subprocess
-import traceback
+import importlib.util
+
 import tkinter as tk
-from tkinter import Toplevel, Label, messagebox, simpledialog, ttk
+from tkinter import messagebox, ttk, simpledialog
+import traceback
 
 import pyperclip
 import pygetwindow as gw
@@ -18,53 +20,65 @@ from selenium.webdriver.support import expected_conditions as EC
 class HEWPSetItem:
     def __init__(self):
         print("[INIT] Initializing HEWPSetItem...")
-        
         self.notification_root = None
         self._chrome_was_launched = False
         self.driver = None
         self.wait = None
 
-        print("[INIT] Hiding console window...")
         self._hide_console()
 
-        print("[INIT] Checking prerequisites...")
         if self._check_prerequisites():
-            print("[INIT] Connecting to browser...")
+            print("[INIT] Prerequisites OK. Connecting to browser...")
             self.connect_to_browser()
-            print("[INIT] Hiding console window again...")
             self._hide_console()
 
     def _show_console(self):
-        print("[CONSOLE] Showing console window...")
         if sys.platform == 'win32':
+            print("[CONSOLE] Showing console window.")
             ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 1)
 
     def _hide_console(self):
         if sys.platform == 'win32':
+            print("[CONSOLE] Hiding console window.")
             ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
 
     def _check_prerequisites(self):
-        self._show_console()
-        print("[CHECK] Checking required Python packages...")
-        try:
-            import selenium, pyautogui, pyperclip, pygetwindow
-            print("[CHECK] ✅ Required packages are installed")
-        except ImportError as e:
-            print(f"[CHECK] ❌ Missing package: {str(e)}")
-            print("Please run: pip install selenium pyautogui pyperclip pygetwindow")
-            messagebox.showerror("Missing Packages", f"Please install:\nselenium\npyautogui\npyperclip\npygetwindow")
+        """Verify all requirements are met"""
+        print("[CHECK] Checking prerequisites...")
+        print("="*50)
+        print("CHECKING PREREQUISITES")
+        print("="*50)
+
+        required_modules = [
+            "selenium", "pyperclip", "pygetwindow", "tkinter"
+        ]
+        missing = []
+        for mod in required_modules:
+            if importlib.util.find_spec(mod) is None:
+                missing.append(mod)
+        if missing:
+            print(f"❌ Missing packages: {', '.join(missing)}")
+            print(f"Please run: pip install {' '.join(missing)}")
+            messagebox.showerror("Missing Packages", f"Please install:\n" + "\n".join(missing))
             sys.exit(1)
-        print("[CHECK] Checking if Chrome is running with debugging port...")
+        else:
+            print("✅ All required Python packages are installed.")
+
+        # Check Chrome debug status
         if not self._is_chrome_running_with_debug():
-            print("[CHECK] ⚠️ Chrome not running with debugging port")
+            print("⚠️ Chrome not running with debugging port")
             if not self._launch_chrome_with_debug():
                 messagebox.showerror("Chrome Error", "Failed to launch Chrome with debugging")
                 sys.exit(1)
             self._chrome_was_launched = True
+        else:
+            print("✅ Chrome is running with debugging port.")
         return True
 
     def _is_chrome_running_with_debug(self):
-        print("[CHECK] Running netstat to check for Chrome debug port...")
+        """Check if Chrome is running with debug port and is a chrome.exe process.
+        If port is open but not by chrome.exe, kill the process and exit."""
+        print("[CHECK] Checking if Chrome is running with debug port...")
         try:
             result = subprocess.run(
                 ['netstat', '-ano'],
@@ -72,19 +86,47 @@ class HEWPSetItem:
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            return ":9222" in result.stdout
-        except Exception:
+            lines = result.stdout.splitlines()
+            for line in lines:
+                if ":9222" in line and "LISTENING" in line:
+                    parts = line.split()
+                    pid = parts[-1]
+                    # Now check if this PID is a Chrome process
+                    tasklist = subprocess.run(
+                        ['tasklist', '/FI', f'PID eq {pid}'],
+                        capture_output=True,
+                        text=True,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    if "chrome.exe" in tasklist.stdout.lower():
+                        print(f"[CHECK] Chrome debug port found and process is chrome.exe (PID {pid})")
+                        return True
+                    else:
+                        print(f"[CHECK] Port 9222 is open but not used by chrome.exe (PID {pid})")
+                        # Try to kill the process using the port
+                        try:
+                            subprocess.run(['taskkill', '/PID', pid, '/F'], creationflags=subprocess.CREATE_NO_WINDOW)
+                            print(f"[CHECK] Killed process PID {pid} using port 9222.")
+                        except Exception as kill_err:
+                            print(f"[CHECK] Failed to kill process PID {pid}: {kill_err}")
+                        print("[CHECK] Exiting script due to invalid debug port usage.")
+                        import sys
+                        sys.exit(1)
+            print("[CHECK] Chrome debug port not found or not a Chrome process.")
+            return False
+        except Exception as e:
+            print(f"[CHECK] Error checking Chrome debug port: {e}")
             return False
 
     def _launch_chrome_with_debug(self):
-        print("[CHROME] Attempting to launch Chrome with debugging...")
+        print("[LAUNCH] Attempting to launch Chrome with debugging...")
         chrome_paths = [
             r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
         ]
         for path in chrome_paths:
             if os.path.exists(path):
-                print(f"[CHROME] 🚀 Launching Chrome with debugging: {path}")
+                print(f"🚀 Launching Chrome with debugging: {path}")
                 try:
                     subprocess.Popen([
                         path,
@@ -92,83 +134,61 @@ class HEWPSetItem:
                         "--user-data-dir=C:\\Temp\\ChromeDebugProfile",
                         "https://works.haryana.gov.in/HEWP_Login/login.aspx"
                     ], creationflags=subprocess.CREATE_NO_WINDOW)
-                    time.sleep(1)
+                    time.sleep(0.2)
+                    print("[LAUNCH] Chrome launched. Please login and rerun script.")
                     sys.exit(0)
                 except Exception as e:
-                    print(f"[CHROME] Failed to launch Chrome: {str(e)}")
+                    print(f"Failed to launch Chrome: {str(e)}")
                     return False
-        print("[CHROME] ❌ Chrome not found in standard locations")
+
+        print("❌ Chrome not found in standard locations")
         print("Please manually start Chrome with:")
         print("chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\\Temp\\ChromeDebugProfile")
         return False
 
     def connect_to_browser(self):
+        """Connect to existing Chrome browser instance"""
         print("[BROWSER] Connecting to Chrome browser...")
         chrome_options = Options()
         chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        print("="*50)
+        print("BROWSER CONNECTION")
+        print("="*50)
         try:
             self.driver = webdriver.Chrome(options=chrome_options)
             self.wait = WebDriverWait(self.driver, 20)
             if self._chrome_was_launched:
-                print("[BROWSER] ⚠️ NEW CHROME SESSION DETECTED")
+                print("\n⚠️ NEW CHROME SESSION DETECTED")
                 print("Please complete login to HEWP in the Chrome window")
-                print("After login, rerun this after all")
+                print("After login, rerun this script to continue automation.")
                 sys.exit(0)
             else:
-                print("[BROWSER] ✅ Reconnected to existing Chrome session")
-            print("[BROWSER] Starting automation...")
+                print("✅ Reconnected to existing Chrome session")
+            print("="*50)
+            print("STARTING AUTOMATION")
+            print("="*50)
         except Exception as e:
-            print(f"[BROWSER] ❌ Browser connection failed: {str(e)}")
+            print(f"❌ Browser connection failed: {str(e)}")
             sys.exit(1)
 
     def ensure_window_visible(self):
+        """Bring Chrome window to foreground if minimized"""
         print("[WINDOW] Ensuring Chrome window is visible...")
         try:
             chrome_windows = gw.getWindowsWithTitle("Chrome")
             if chrome_windows:
                 chrome_window = chrome_windows[0]
                 if chrome_window.isMinimized:
+                    print("[WINDOW] Restoring minimized Chrome window.")
                     chrome_window.restore()
                 chrome_window.activate()
+                print("[WINDOW] Chrome window activated.")
                 time.sleep(0.5)
+            else:
+                print("[WINDOW] No Chrome window found.")
         except Exception as e:
-            print(f"[WINDOW] Window management warning: {str(e)}")
+            print(f"Window management warning: {str(e)}")
 
-    def show_notification(self, message, duration=3000):
-        print(f"[NOTIFY] Showing notification: {message}")
-        if self.notification_root:
-            try:
-                self.notification_root.destroy()
-            except Exception:
-                pass
-        self.notification_root = tk.Tk()
-        self.notification_root.withdraw()
-        popup = Toplevel(self.notification_root)
-        popup.wm_overrideredirect(True)
-        x_pos = self.notification_root.winfo_screenwidth() - 320
-        popup.geometry(f"300x60+{x_pos}+50")
-        popup.configure(background='#4CAF50')
-        Label(
-            popup,
-            text=message,
-            fg='white',
-            bg='#4CAF50',
-            font=('Arial', 10, 'bold'),
-            padx=20,
-            pady=20
-        ).pack()
-        def close_notification():
-            try:
-                popup.destroy()
-                self.notification_root.destroy()
-                self.notification_root = None
-            except Exception:
-                pass
-        popup.after(duration, close_notification)
-        popup.update_idletasks()
-        popup.deiconify()
-        popup.lift()
-        self.notification_root.mainloop()
 
     def ask_for_item_number(self):
         print("[INPUT] Asking for item number...")
@@ -593,7 +613,8 @@ class HEWPSetItem:
                     # The element was replaced after selection, so just skip highlighting
                     pass
                 break  # Exit loop if selection was successful
-
+            print("[SELECT] Item selection complete.")
+            messagebox.showinfo("Item Selection", "Item selection complete.")
         except Exception as e:
             print(f"Error in select_rate_type_with_script: {e}")
             traceback.print_exc()
@@ -689,19 +710,21 @@ class HEWPSetItem:
             self.ensure_final_date()  # Ensure final date is set if applicable
             self.search_and_select_item(item_number)
             
-            
+            print("[PROCESS] Item selection complete. ..")
             return True
             
         except Exception as e:
             messagebox.showerror("Error", f"Processing failed:\n{str(e)}")
             return False
         finally:
-            self.close()
+            pass
 
     def close(self):
         """Clean up resources"""
         if hasattr(self, 'driver'):
-            self.driver.quit()
+            # self.driver.quit()
+            print("skipped Closing browser session...")
+            pass
         if self.notification_root:
             try:
                 self.notification_root.destroy()
