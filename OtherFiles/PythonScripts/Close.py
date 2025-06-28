@@ -9,18 +9,18 @@ def is_process_running(process_name):
     result = subprocess.run(['tasklist'], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
     return process_name.lower() in result.stdout.lower()
 
-def kill_chrome_processes():
-    """Kill all chrome.exe processes if running."""
-    print("[CLOSE] Checking for running Chrome processes...")
-    if is_process_running('chrome.exe'):
-        print("[CLOSE] Killing all Chrome processes...")
-        try:
-            subprocess.run(['taskkill', '/IM', 'chrome.exe', '/F'], check=False, creationflags=subprocess.CREATE_NO_WINDOW)
-            print("[CLOSE] All Chrome processes killed.")
-        except Exception as e:
-            print(f"[CLOSE][ERROR] Error killing Chrome: {e}")
-    else:
-        print("[CLOSE] No Chrome processes found.")
+#def kill_chrome_processes():
+   # """Kill all chrome.exe processes if running."""
+   # print("[CLOSE] Checking for running Chrome processes...")
+   # if is_process_running('chrome.exe'):
+   #     print("[CLOSE] Killing all Chrome processes...")
+    #    try:
+    #        subprocess.run(['taskkill', '/IM', 'chrome.exe', '/F'], check=False, creationflags=subprocess.CREATE_NO_WINDOW)
+     #       print("[CLOSE] All Chrome processes killed.")
+     #   except Exception as e:
+     #       print(f"[CLOSE][ERROR] Error killing Chrome: {e}")
+   # else:
+     #   print("[CLOSE] No Chrome processes found.")
 
 def kill_debug_port_process():
     """Find and kill all processes using port 9222."""
@@ -50,7 +50,7 @@ def main():
     print("="*40)
     print("MRGARGSIR Chrome Debug Cleaner")
     print("="*40)
-    kill_chrome_processes()
+    #kill_chrome_processes()
     time.sleep(1)
     kill_debug_port_process()
     print("[CLOSE] Cleanup complete.")
