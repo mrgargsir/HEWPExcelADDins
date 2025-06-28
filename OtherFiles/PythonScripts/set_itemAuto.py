@@ -48,7 +48,7 @@ class HEWPSetItem:
     def _hide_console(self):
         if sys.platform == 'win32':
             print("[CONSOLE] Hiding console window.")
-            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 10)  # SW_HIDE
 
     def _check_prerequisites(self):
         """Verify all requirements are met"""
@@ -144,7 +144,7 @@ class HEWPSetItem:
                     ], creationflags=subprocess.CREATE_NO_WINDOW)
                     time.sleep(0.2)
                     print("[LAUNCH] Chrome launched. Please login and rerun script.")
-                    sys.exit(0)
+                    sys.exit(1)
                 except Exception as e:
                     print(f"Failed to launch Chrome: {str(e)}")
                     return False
