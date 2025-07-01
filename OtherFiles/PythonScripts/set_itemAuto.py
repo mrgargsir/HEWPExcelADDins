@@ -169,7 +169,7 @@ class HEWPSetItem:
                 print("\n⚠️ NEW CHROME SESSION DETECTED")
                 print("Please complete login to HEWP in the Chrome window")
                 print("After login, rerun this script to continue automation.")
-                sys.exit(0)
+                sys.exit(1)
             else:
                 print("✅ Reconnected to existing Chrome session")
             print("="*50)
@@ -301,7 +301,7 @@ class HEWPSetItem:
             result["value"] = None
             win.destroy()
             root.quit()
-            sys.exit(0)
+            sys.exit(1)
 
         # Bind Enter and Esc keys
         win.bind('<Return>', on_ok)
@@ -565,6 +565,7 @@ class HEWPSetItem:
         except Exception as e:
             print(f"Error in select_rate_type_with_script: {e}")
             traceback.print_exc()
+            sys.exit(1)
     
     
     def ensure_subhead_selected(self):
@@ -693,7 +694,7 @@ class HEWPSetItem:
             
         except Exception as e:
             messagebox.showerror("Error", f"Processing failed:\n{str(e)}")
-            return False
+            sys.exit(1)
         finally:
             pass
 
