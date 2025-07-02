@@ -1171,7 +1171,7 @@ class HEWPLogin:
         print("[PROCESS] Starting main process workflow...")
         try:
             self.Login_Process()  # No need to call self.user_details() here
-            self.minimize_chrome_window()
+            # self.minimize_chrome_window() 
             return True
         except Exception as e:
             print(f"[PROCESS] Processing failed: {str(e)}")

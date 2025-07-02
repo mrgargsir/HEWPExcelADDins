@@ -532,12 +532,22 @@ def main():
     print("Haryana E-Billing Data Extractor")
     print("=" * 50)
     
-    # Default to Desktop with timestamp in filename
+    # Standard Desktop path
     desktop_dir = os.path.join(os.path.expanduser('~'), 'Desktop')
-    if not os.path.exists(desktop_dir):
+    # OneDrive Desktop path (common for Windows)
+    onedrive_dir = os.path.join(os.path.expanduser('~'), 'OneDrive', 'Desktop')
+
+    # Prefer standard Desktop, else OneDrive Desktop, else create standard Desktop
+    if os.path.exists(desktop_dir):
+        chosen_dir = desktop_dir
+    elif os.path.exists(onedrive_dir):
+        chosen_dir = onedrive_dir
+    else:
         os.makedirs(desktop_dir, exist_ok=True)
+        chosen_dir = desktop_dir
+
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    default_filename = os.path.join(desktop_dir, f"haryana_ebilling_data_{timestamp}.xlsx")
+    default_filename = os.path.join(chosen_dir, f"haryana_ebilling_data_{timestamp}.xlsx")
     
     filename = default_filename
     print(f"Using Desktop for output file: {filename}")
