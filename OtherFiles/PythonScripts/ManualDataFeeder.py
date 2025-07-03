@@ -4,7 +4,8 @@ import ctypes
 import time
 import subprocess
 import importlib.util
-
+import pandas as pd
+import math
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -191,6 +192,7 @@ class HEWPwritter:
 
     def ensure_excel_window_visible(self):
         """Ensure Excel window is open and visible, else show error and exit."""
+        print("[EXCEL] Checking for Excel window...")
         try:
             excel_windows = gw.getWindowsWithTitle("Excel")
             if not excel_windows:
@@ -199,9 +201,10 @@ class HEWPwritter:
                 sys.exit(1)
             excel_window = excel_windows[0]
             if excel_window.isMinimized:
+                print("[EXCEL] Excel window is minimized. Restoring...")
                 excel_window.restore()
             excel_window.activate()
-            print("[EXCEL] Excel window activated.")
+            print("[EXCEL] Excel window activated and brought to foreground.")
             time.sleep(0.5)
         except Exception as e:
             print(f"[EXCEL] Error ensuring Excel window is visible: {e}")
@@ -209,132 +212,199 @@ class HEWPwritter:
             sys.exit(1)
 
     def fill_portal_row(self, row_data, row_index):
-        """
-        Fill the portal table fields for a specific row index (starting from 2).
-        row_data: dict with keys - Description, Number, Length, Breadth, Depth
-        row_index: int, portal row index (2 for first row, 3 for second, ...)
-        """
         driver = self.driver
         wait = self.wait
         suffix = f"_ctl{row_index}"
 
-        unit_elem = driver.find_element(By.ID, 'lbltobeexecutedunit')
-        unit = unit_elem.text.strip().lower()  # Normalize unit to lowercase
+        print(f"[DEBUG] Filling portal row: index={row_index}, data={row_data}")
 
-        # Always fill description and number if present
-        if 'Description' in row_data:
-            desc_id = f"GV_ADD_to_List:{suffix}:txtdescription"
-            desc_elem = wait.until(EC.presence_of_element_located((By.ID, desc_id)))
-            desc_elem.clear()
-            desc_elem.send_keys(str(row_data.get('Description', '')))
+        try:
+            print(f"[DEBUG] Locating unit element for row {row_index}...")
+            unit_elem = driver.find_element(By.ID, 'unit')
+            unit = unit_elem.text.strip().lower()
+            print(f"[DEBUG] Unit for row {row_index}: {unit}")
 
-        if 'Number' in row_data:
-            num_id = f"GV_ADD_to_List:{suffix}:txtNumber"
-            num_elem = driver.find_element(By.ID, num_id)
-            num_elem.clear()
-            num_elem.send_keys(str(row_data.get('Number', '')))
+            if 'Description' in row_data:
+                desc_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtdescription"
+                print(f"[DEBUG] Filling Description for row {row_index} using name {desc_name}")
+                desc_elem = wait.until(EC.presence_of_element_located((By.NAME, desc_name)))
+                desc_elem.clear()
+                desc_elem.send_keys(str(row_data.get('Description', '')))
+                print(f"[DEBUG] Description filled: {row_data.get('Description', '')}")
 
-        # Fill fields based on unit
-        if unit == 'cum':
-            # Length, Breadth, Depth
-            if 'Length' in row_data:
-                len_id = f"GV_ADD_to_List:{suffix}:txtLength"
-                len_elem = driver.find_element(By.ID, len_id)
-                len_elem.clear()
-                len_elem.send_keys(str(row_data.get('Length', '')))
-            if 'Breadth' in row_data:
-                br_id = f"GV_ADD_to_List:{suffix}:txtBreadth"
-                br_elem = driver.find_element(By.ID, br_id)
-                br_elem.clear()
-                br_elem.send_keys(str(row_data.get('Breadth', '')))
-            if 'Depth' in row_data:
-                dep_id = f"GV_ADD_to_List:{suffix}:txtDepth"
-                dep_elem = driver.find_element(By.ID, dep_id)
-                dep_elem.clear()
-                dep_elem.send_keys(str(row_data.get('Depth', '')))
-        elif unit == 'sqm':
-            # Length, Breadth
-            if 'Length' in row_data:
-                len_id = f"GV_ADD_to_List:{suffix}:txtLength"
-                len_elem = driver.find_element(By.ID, len_id)
-                len_elem.clear()
-                len_elem.send_keys(str(row_data.get('Length', '')))
-            if 'Breadth' in row_data:
-                br_id = f"GV_ADD_to_List:{suffix}:txtBreadth"
-                br_elem = driver.find_element(By.ID, br_id)
-                br_elem.clear()
-                br_elem.send_keys(str(row_data.get('Breadth', '')))
-        elif unit == 'rm':
-            # Only Length
-            if 'Length' in row_data:
-                len_id = f"GV_ADD_to_List:{suffix}:txtLength"
-                len_elem = driver.find_element(By.ID, len_id)
-                len_elem.clear()
-                len_elem.send_keys(str(row_data.get('Length', '')))
-        else:
-            # For 'Each' or other units, just fill Quantity if present
-            if 'Quantity' in row_data:
-                qty_id = f"GV_ADD_to_List:{suffix}:txtqty"
-                qty_elem = driver.find_element(By.ID, qty_id)
-                qty_elem.clear()
-                qty_elem.send_keys(str(row_data['Quantity']))
+                # --- Set Plus/Minus dropdown based on product sign ---
+                try:
+                    num = float(row_data.get('Number', 1) or 1)
+                    length = float(row_data.get('Length', 1) or 1)
+                    breadth = float(row_data.get('Breadth', 1) or 1)
+                    depth = float(row_data.get('Depth', 1) or 1)
+                    product = num * length * breadth * depth
+                    ddl_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:ddlplusminus"
+                    ddl_elem = driver.find_element(By.NAME, ddl_name)
+                    if product < 0:
+                        print(f"[DEBUG] Product is negative ({product}), setting dropdown to Minus.")
+                        ddl_elem.send_keys('-')
+                    else:
+                        print(f"[DEBUG] Product is positive ({product}), keeping dropdown as Plus.")
+                        ddl_elem.send_keys('+')
+                except Exception as e:
+                    print(f"[DEBUG] Could not set Plus/Minus dropdown: {e}")
 
-        
+            if 'Number' in row_data:
+                num_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtNumber"
+                print(f"[DEBUG] Filling Number for row {row_index} using name {num_name}")
+                num_elem = driver.find_element(By.NAME, num_name)
+                num_elem.clear()
+                num_elem.send_keys(str(row_data.get('Number', '')))
+                print(f"[DEBUG] Number filled: {row_data.get('Number', '')}")
 
-        print(f"[PORTAL] Data filled for unit: {unit}")
+            if unit == 'cum':
+                if 'Length' in row_data:
+                    len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
+                    print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
+                    len_elem = driver.find_element(By.NAME, len_name)
+                    len_elem.clear()
+                    len_elem.send_keys(str(row_data.get('Length', '')))
+                    print(f"[DEBUG] Length filled: {row_data.get('Length', '')}")
+                if 'Breadth' in row_data:
+                    br_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtBreadth"
+                    print(f"[DEBUG] Filling Breadth for row {row_index} using name {br_name}")
+                    br_elem = driver.find_element(By.NAME, br_name)
+                    br_elem.clear()
+                    br_elem.send_keys(str(row_data.get('Breadth', '')))
+                    print(f"[DEBUG] Breadth filled: {row_data.get('Breadth', '')}")
+                if 'Depth' in row_data:
+                    dep_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtDepth"
+                    print(f"[DEBUG] Filling Depth for row {row_index} using name {dep_name}")
+                    dep_elem = driver.find_element(By.NAME, dep_name)
+                    dep_elem.clear()
+                    dep_elem.send_keys(str(row_data.get('Depth', '')))
+                    print(f"[DEBUG] Depth filled: {row_data.get('Depth', '')}")
+            elif unit == 'sqm':
+                if 'Length' in row_data:
+                    len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
+                    print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
+                    len_elem = driver.find_element(By.NAME, len_name)
+                    len_elem.clear()
+                    len_elem.send_keys(str(row_data.get('Length', '')))
+                    print(f"[DEBUG] Length filled: {row_data.get('Length', '')}")
+                if 'Breadth' in row_data:
+                    br_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtBreadth"
+                    print(f"[DEBUG] Filling Breadth for row {row_index} using name {br_name}")
+                    br_elem = driver.find_element(By.NAME, br_name)
+                    br_elem.clear()
+                    br_elem.send_keys(str(row_data.get('Breadth', '')))
+                    print(f"[DEBUG] Breadth filled: {row_data.get('Breadth', '')}")
+            elif unit == 'rm':
+                if 'Length' in row_data:
+                    len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
+                    print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
+                    len_elem = driver.find_element(By.NAME, len_name)
+                    len_elem.clear()
+                    len_elem.send_keys(str(row_data.get('Length', '')))
+                    print(f"[DEBUG] Length filled: {row_data.get('Length', '')}")
+            else:
+                if 'Quantity' in row_data:
+                    qty_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtqty"
+                    print(f"[DEBUG] Filling Quantity for row {row_index} using name {qty_name}")
+                    qty_elem = driver.find_element(By.NAME, qty_name)
+                    qty_elem.clear()
+                    qty_elem.send_keys(str(row_data['Quantity']))
+                    print(f"[DEBUG] Quantity filled: {row_data['Quantity']}")
+        except Exception as e:
+            print(f"[ERROR] Failed to fill portal row {row_index}: {e!r}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+        print(f"[PORTAL] Data filled for row {row_index}")
+
+    def clear_portal_fields(self):
+        """Clear all portal input fields after processing."""
+        print("[CLEAR] Clearing all portal fields...")
+        try:
+            # Adjust selectors as per your portal's actual field names/IDs
+            for suffix in range(2, 12):  # Assuming up to 10 rows (2-11)
+                row_suffix = f"_ctl{suffix}"
+                try:
+                    desc = self.driver.find_element(By.NAME, f"_ctl0:maincontentcm:GV_ADD_to_List:{row_suffix}:txtdescription")
+                    desc.clear()
+                except Exception: pass
+                try:
+                    ddl = self.driver.find_element(By.NAME, f"_ctl0:maincontentcm:GV_ADD_to_List:{row_suffix}:ddlplusminus")
+                    ddl.send_keys('+')  # Reset to default Plus
+                except Exception: pass
+                try:
+                    num = self.driver.find_element(By.NAME, f"_ctl0:maincontentcm:GV_ADD_to_List:{row_suffix}:txtNumber")
+                    num.clear()
+                except Exception: pass
+                try:
+                    length = self.driver.find_element(By.NAME, f"_ctl0:maincontentcm:GV_ADD_to_List:{row_suffix}:txtLength")
+                    length.clear()
+                except Exception: pass
+                try:
+                    breadth = self.driver.find_element(By.NAME, f"_ctl0:maincontentcm:GV_ADD_to_List:{row_suffix}:txtBreadth")
+                    breadth.clear()
+                except Exception: pass
+                try:
+                    depth = self.driver.find_element(By.NAME, f"_ctl0:maincontentcm:GV_ADD_to_List:{row_suffix}:txtDepth")
+                    depth.clear()
+                except Exception: pass
+                try:
+                    qty = self.driver.find_element(By.NAME, f"_ctl0:maincontentcm:GV_ADD_to_List:{row_suffix}:txtqty")
+                    qty.clear()
+                except Exception: pass
+
+            print("[CLEAR] Portal fields cleared.")
+        except Exception as e:
+            print(f"[CLEAR] Error clearing portal fields: {e}")
 
     def load_selected_excel_data_no_headers(self):
-        self.ensure_excel_window_visible()  # <-- Ensure Excel is open and visible
-        """
-        Simulates Ctrl+C, reads clipboard data (no headers), and processes rows:
-        - Description: if blank, set to "."
-        - Number: if blank or zero, skip row
-        - Remaining columns: assign non-zero numeric values in order, rest set to 0
-        """
-        import pandas as pd
-        import pyautogui
-        import time
-
+        self.ensure_excel_window_visible()
         print("[EXCEL] Simulating Ctrl+C in Excel...")
         pyautogui.hotkey('ctrl', 'c')
-        time.sleep(0.5)  # Wait for clipboard to update
-
+        time.sleep(0.5)
         print("[EXCEL] Reading data from clipboard (no headers)...")
         try:
             df = pd.read_clipboard(sep='\t', header=None)
             expected_cols = ['Description', 'Number', 'Length', 'Breadth', 'Depth']
             df.columns = expected_cols[:df.shape[1]]
+            print(f"[EXCEL] DataFrame loaded with columns: {df.columns.tolist()} and {len(df)} rows.")
 
             processed_rows = []
-            for _, row in df.iterrows():
+            for idx, row in df.iterrows():
+                print(f"[EXCEL] Processing row {idx+1}: {row.values}")
                 desc = str(row['Description']).strip() if pd.notna(row['Description']) else ""
                 if not desc:
                     desc = "."
                 num = row['Number']
-                # Skip if Number is blank or zero
                 if pd.isna(num):
+                    print(f"[EXCEL] Skipping row {idx+1}: Number is blank.")
                     continue
                 try:
                     num_val = float(num)
                 except Exception:
+                    print(f"[EXCEL] Skipping row {idx+1}: Number is not a valid float.")
                     continue
                 if num_val == 0:
+                    print(f"[EXCEL] Skipping row {idx+1}: Number is zero.")
                     continue
 
-                # Process Length, Breadth, Depth: assign non-zero numeric values in order, rest set to 0
+                # Shift non-zero, non-blank values left for Length, Breadth, Depth
                 values = []
                 for col in ['Length', 'Breadth', 'Depth']:
                     val = row[col]
                     try:
                         val_num = float(val)
+                        # Check for nan and zero
+                        if not math.isnan(val_num) and val_num != 0:
+                            values.append(val_num)
                     except Exception:
-                        val_num = 0
-                    if val_num != 0:
-                        values.append(val_num)
-                # Fill up to 3 columns, rest 0
+                        pass
                 while len(values) < 3:
                     values.append(0)
                 values = values[:3]
+                print(f"[EXCEL] Row {idx+1} processed as: Description={desc}, Number={num_val}, Length={values[0]}, Breadth={values[1]}, Depth={values[2]}")
 
                 processed_rows.append({
                     'Description': desc,
@@ -349,13 +419,15 @@ class HEWPwritter:
         except Exception as e:
             print(f"[EXCEL] Failed to read clipboard data: {e}")
             self.excel_rows = []
-   
+
     def submit_data(self): 
         """Click 'Add Items to List' button after filling row data"""
         driver = self.driver
         wait = self.wait
+        print("[SUBMIT] Attempting to submit data to portal...")
         try:
             add_btn = driver.find_element(By.ID, 'btn_add_Description')
+            print("[SUBMIT] Found 'Add Items to List' button. Clicking...")
             add_btn.click()
             # wait.until(EC.invisibility_of_element_located((By.ID, 'loadingSpinner')))
             time.sleep(0.5)  # Wait for any animations to finish
@@ -427,7 +499,7 @@ class HEWPwritter:
     def handle_quantity_error_and_summary(self):
         """Handle SweetAlert error for excess quantity and show summary message."""
         print("[SUMMARY] Checking for quantity error and summary...")
-        try {
+        try:
             print("[SUMMARY] Waiting for SweetAlert error modal...")
             # Wait for the SweetAlert error modal to appear
             short_wait = WebDriverWait(self.driver, 5)
@@ -468,67 +540,67 @@ class HEWPwritter:
                 # Append the summary message at the top
                 print("[SUMMARY] Appending summary message to page.")
                 self.driver.execute_script("""
-                    javascript:(()=>{
-                        // Get elements for To Be Executed
-                        const v = document.getElementById('lbltobeexecuted');
-                        const u = document.getElementById('lbltobeexecutedunit');
-                        
-                        // Get elements for Already Executed
-                        const executedQtyElem = document.getElementById('lblexecuted');
-                        const executedUnitElem = document.getElementById('lblexecutedunit');
-                        
-                        // Get Table Qty (Grand Qty)
-                        const grandQtyElem = document.getElementById('lblGrand_Qty');
-                        
-                        if (!v || !u || !executedQtyElem || !executedUnitElem || !grandQtyElem) {
-                            return alert('Required fields not found. Contact @mrgargsir.');
-                        }
-                        
-                        const dn = parseFloat(v.textContent);
-                        const executedQty = parseFloat(executedQtyElem.textContent);
-                        const grandQty = parseFloat(grandQtyElem.textContent);
-                        
-                        if (isNaN(dn)) return alert('To Be Executed value is not a number.');
-                        if (isNaN(executedQty)) return alert('Executed value is not a number.');
-                        if (isNaN(grandQty)) return alert('Table Qty (Grand Qty) is not a number.');
-                        
-                        const unit = u.textContent.trim();
-                        const executedUnit = executedUnitElem.textContent.trim();
-                        
-                        if (unit !== executedUnit) {
-                            return alert(`Unit mismatch! To Be Executed: ${unit}, Executed: ${executedUnit}`);
-                        }
-                        
-                        const al = (dn * 0.25).toFixed(3);
-                        const total = (dn * 1.25).toFixed(3);
-                        const remainingQty = (parseFloat(total) - executedQty).toFixed(3);
-                        const pendingQty = (parseFloat(remainingQty) - grandQty).toFixed(3);
-                        
-                        const msg = `
-                        🚨 **Extra Quantity Alert** 🚨
-                    ⚖️ DNIT QTY          = ${dn} ${unit}
-                    ➕ ALLOWANCE (25%)  = ${al} ${unit}
-                    ✅ TOTAL            = ${total} ${unit}
-                    ➖ EXECUTED QTY    = ${executedQty} ${unit}
-                    📌 REMAINING QTY   = ${remainingQty} ${unit}
-                    ➖ TABLE QTY       = ${grandQty} ${unit}
-                    🔄 PENDING QTY     = ${pendingQty} ${unit}
-                        `;
-                        
-                        try {
+                    // Get elements for To Be Executed
+                    const v = document.getElementById('lbltobeexecuted');
+                    const u = document.getElementById('lbltobeexecutedunit');
+                    
+                    // Get elements for Already Executed
+                    const executedQtyElem = document.getElementById('lblexecuted');
+                    const executedUnitElem = document.getElementById('lblexecutedunit');
+                    
+                    // Get Table Qty (Grand Qty)
+                    const grandQtyElem = document.getElementById('lblGrand_Qty');
+                    
+                    if (!v || !u || !executedQtyElem || !executedUnitElem || !grandQtyElem) {
+                        alert('Required fields not found. Contact @mrgargsir.');
+                        return;
+                    }
+                    
+                    const dn = parseFloat(v.textContent);
+                    const executedQty = parseFloat(executedQtyElem.textContent);
+                    const grandQty = parseFloat(grandQtyElem.textContent);
+                    
+                    if (isNaN(dn)) { alert('To Be Executed value is not a number.'); return; }
+                    if (isNaN(executedQty)) { alert('Executed value is not a number.'); return; }
+                    if (isNaN(grandQty)) { alert('Table Qty (Grand Qty) is not a number.'); return; }
+                    
+                    const unit = u.textContent.trim();
+                    const executedUnit = executedUnitElem.textContent.trim();
+                    
+                    if (unit !== executedUnit) {
+                        alert(`Unit mismatch! To Be Executed: ${unit}, Executed: ${executedUnit}`);
+                        return;
+                    }
+                    
+                    const al = (dn * 0.25).toFixed(3);
+                    const total = (dn * 1.25).toFixed(3);
+                    const remainingQty = (parseFloat(total) - executedQty).toFixed(3);
+                    const pendingQty = (parseFloat(remainingQty) - grandQty).toFixed(3);
+                    
+                    const msg = `
+                    🚨 **Extra Quantity Alert** 🚨
+                ⚖️ DNIT QTY          = ${dn} ${unit}
+                ➕ ALLOWANCE (25%)  = ${al} ${unit}
+                ✅ TOTAL            = ${total} ${unit}
+                ➖ EXECUTED QTY    = ${executedQty} ${unit}
+                📌 REMAINING QTY   = ${remainingQty} ${unit}
+                ➖ TABLE QTY       = ${grandQty} ${unit}
+                🔄 PENDING QTY     = ${pendingQty} ${unit}
+                    `;
+                    
+                    try {
+                        alert(msg);
+                    } catch (err) {
+                        if (Notification.permission === 'granted') {
+                            new Notification(msg);
+                        } else if (Notification.permission !== 'denied') {
+                            Notification.requestPermission().then(p => {
+                                p === 'granted' ? new Notification(msg) : alert(msg);
+                            });
+                        } else {
                             alert(msg);
-                        } catch {
-                            if (Notification.permission === 'granted') {
-                                new Notification(msg);
-                            } else if (Notification.permission !== 'denied') {
-                                Notification.requestPermission().then(p => {
-                                    p === 'granted' ? new Notification(msg) : alert(msg);
-                                });
-                            } else {
-                                alert(msg);
-                            }
                         }
-                    })();
+                    }
                 """)
                 print("[SUMMARY] Summary message appended.")
                 return True
@@ -547,23 +619,24 @@ class HEWPwritter:
             self.ensure_window_visible()
             batch_size = 10
             total_rows = len(self.excel_rows)
+            print(f"[PROCESS] Total rows to process: {total_rows}")
             for start in range(0, total_rows, batch_size):
                 batch = self.excel_rows[start:start+batch_size]
-                # Usage in your batch loop:
+                print(f"[PROCESS] Processing batch {start//batch_size+1} (rows {start+1}-{start+len(batch)})")
                 for i, row_data in enumerate(batch):
-                    portal_row_index = i + 2  # _ctl2 for first row, _ctl3 for second, etc.
+                    portal_row_index = i + 2
+                    print(f"[PROCESS] Filling portal row {portal_row_index} in batch...")
                     self.fill_portal_row(row_data, portal_row_index)
                 print(f"[PROCESS] Batch {start//batch_size+1} loaded from Excel and filled in portal.")
-                # Submit data after each batch
                 self.submit_data()
                 print("[PROCESS] Data submitted to portal.")
                 self.ensure_window_visible()
-                # Handle quantity error and summary after each batch
                 if self.handle_quantity_error_and_summary():
                     print("[PROCESS] Quantity error handled. Stopping process.")
                     return False
-                # If no error, proceed with confirmation and scrolling
                 self.handle_confirmation_and_scrolling()
+                print("[PROCESS] Confirmation and scrolling handled.")
+                self.clear_portal_fields()
             print("[PROCESS] All batches processed successfully.")
             return True
         except Exception as e:

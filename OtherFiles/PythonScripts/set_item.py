@@ -629,31 +629,59 @@ class HEWPSetItem:
     def ensure_subhead_selected(self):
         """Ensure the '[Tender ID] & Agreement Name' (ddltender) dropdown is selected, prompting user if needed.
         If not present, navigate to the correct page using menu clicks."""
-        
-        # Ensure page is loaded and user is logged in
+
         print("[CHECK] Ensuring user is logged in and on the correct page...")
-        user_elem = WebDriverWait(self.driver, 5).until(
-            EC.presence_of_element_located((By.ID, "lblusername"))
-        )
-        # Ensure user is logged in by checking for the username label
-        print("[CHECK] Checking if user is logged in...")
+        current_url = self.driver.current_url
+        print("[DEBUG] Current URL:", current_url)
+
+        # If not on the correct domain, try to find the right tab
+        if "works.haryana.gov.in" not in current_url:
+            print("[SWITCH] Looking for HEWP tab...")
+            for handle in self.driver.window_handles:
+                self.driver.switch_to.window(handle)
+                url = self.driver.current_url
+                print("[SWITCH] Tab URL:", url)
+                if "works.haryana.gov.in" in url:
+                    print("[SWITCH] Found HEWP tab.")
+                    break
+            else:
+                print("[NAVIGATION] Navigating to HEWP portal home page...")
+                self.driver.get("https://works.haryana.gov.in/contractor/contractorHome.aspx")
+                time.sleep(2)
+                current_url = self.driver.current_url
+                print("[DEBUG] New URL after navigation:", current_url)
+                if "works.haryana.gov.in" not in current_url:
+                    messagebox.showerror(
+                        "Navigation Error",
+                        "Could not navigate to the HEWP portal.\nPlease open https://works.haryana.gov.in/contractor/contractorHome.aspx in Chrome and log in."
+                    )
+                    raise Exception("Not on HEWP portal.")
+
+        # 2. Check for login status
         try:
-            user_elem = self.driver.find_element(By.ID, "lblusername")
+            user_elem = WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.ID, "lblusername"))
+            )
             username = user_elem.text.strip()
             if not username:
                 raise Exception("User not logged in or username not found.")
-            else:
-                print(f"[CHECK] User '{username}' is logged in.")
+            print(f"[CHECK] User '{username}' is logged in.")
         except Exception:
-            messagebox.showerror("Login Error", "You are not logged in. Please login first.")
+            # Try to detect login form as fallback
+            try:
+                login_input = self.driver.find_element(By.XPATH, "//input[@type='password' or contains(@id, 'login')]")
+                messagebox.showerror("Login Error", "You are not logged in. Please log in to HEWP portal in Chrome and try again.")
+            except Exception:
+                messagebox.showerror("Login Error", "Could not detect login status. Please ensure you are logged in to HEWP portal.")
             raise
 
+        # 3. Now continue as before...
         # Wait for ddltender dropdown to appear
         print("[CHECK] Ensuring '[Tender ID] & Agreement Name' dropdown is present...")
         try:
             select_elem = self.driver.find_element(By.ID, "ddltender")
         except Exception:
-            # Wait up to 5 seconds for the dropdown to appear before deciding we're not on the right page
+            # Wait up to 1 seconds for the dropdown to appear before deciding we're not on the right page
             
 
             try:
