@@ -551,14 +551,14 @@ class HEWPwritter:
                     // Get Table Qty (Grand Qty)
                     const grandQtyElem = document.getElementById('lblGrand_Qty');
                     
-                    if (!v || !u || !executedQtyElem || !executedUnitElem || !grandQtyElem) {
+                    if (!v || !u || !executedQtyElem || !executedUnitElem ) {
                         alert('Required fields not found. Contact @mrgargsir.');
                         return;
                     }
                     
                     const dn = parseFloat(v.textContent);
-                    const executedQty = parseFloat(executedQtyElem.textContent);
-                    const grandQty = parseFloat(grandQtyElem.textContent);
+                    const executedQty = executedQtyElem ? parseFloat(executedQtyElem.textContent) : 0;
+                    const grandQty = grandQtyElem ? parseFloat(grandQtyElem.textContent) : 0;
                     
                     if (isNaN(dn)) { alert('To Be Executed value is not a number.'); return; }
                     if (isNaN(executedQty)) { alert('Executed value is not a number.'); return; }
@@ -603,7 +603,8 @@ class HEWPwritter:
                     }
                 """)
                 print("[SUMMARY] Summary message appended.")
-                return True
+                time.sleep(1)  # Wait for the script to execute
+                return False
             else:
                 print(f"[SUMMARY] Modal heading is not 'Error', got '{heading.text.strip()}'")
         except Exception as e:
