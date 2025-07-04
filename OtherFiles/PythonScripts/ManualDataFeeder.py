@@ -24,17 +24,25 @@ class HEWPwritter:
         self.notification_root = None
         self._chrome_was_launched = False
 
-        self._hide_console()
+        
 
         if self._check_prerequisites():
             print("[INIT] Prerequisites OK. Connecting to browser...")
             self.connect_to_browser()
-            self._hide_console()
+            
 
     def _show_console(self):
         if sys.platform == 'win32':
             print("[CONSOLE] Showing console window.")
-            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 1)
+            hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+            if hwnd:
+                # Show the window
+                ctypes.windll.user32.ShowWindow(hwnd, 1)
+                # Set as topmost
+                HWND_TOPMOST = -1
+                SWP_NOMOVE = 0x0002
+                SWP_NOSIZE = 0x0001
+                ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
 
     def _hide_console(self):
         if sys.platform == 'win32':
@@ -50,7 +58,7 @@ class HEWPwritter:
         print("="*50)
 
         required_modules = [
-            "selenium", "pyautogui", "pyperclip", "pygetwindow", "tkinter"
+            "selenium", "pyautogui", "pyperclip", "pygetwindow", "tkinter", "pandas"
         ]
         missing = []
         for mod in required_modules:
@@ -190,8 +198,66 @@ class HEWPwritter:
         except Exception as e:
             print(f"Window management warning: {str(e)}")
 
+    def ask_and_select_meter_or_feet_dialog(self):
+        """Ask user for Meter/Feet selection with three buttons and select the radio button in the portal."""
+        import tkinter as tk
+
+        result = {"choice": None}
+
+        def select_meter():
+            result["choice"] = "M"
+            root.destroy()
+
+        def select_feet():
+            result["choice"] = "F"
+            root.destroy()
+
+        def cancel():
+            result["choice"] = None
+            root.destroy()
+
+        root = tk.Tk()
+        root.title("Unit Selection")
+        root.resizable(False, False)
+        root.attributes("-topmost", True)
+
+        # Center the window on the screen
+        window_width = 400
+        window_height = 140
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = int((screen_width / 2) - (window_width / 2))
+        y = int((screen_height / 2) - (window_height / 2))
+        root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        label = tk.Label(root, text="UNIT OF MESSURMENT ?", font=("Arial", 11))
+        label.pack(pady=(20, 10))
+
+        btn_frame = tk.Frame(root)
+        btn_frame.pack(pady=10)
+
+        btn_meter = tk.Button(btn_frame, text="Meter", width=10, command=select_meter)
+        btn_meter.grid(row=0, column=0, padx=8)
+
+        btn_feet = tk.Button(btn_frame, text="Feet", width=10, command=select_feet)
+        btn_feet.grid(row=0, column=1, padx=8)
+
+        btn_cancel = tk.Button(btn_frame, text="Cancel", width=10, command=cancel)
+        btn_cancel.grid(row=0, column=2, padx=8)
+
+        root.mainloop()
+
+        if result["choice"] not in ("M", "F"):
+            print("[UNIT] Selection cancelled by user.")
+            self.close()
+            sys.exit(0)
+
+        print(f"[UNIT] User selected: {'Meter' if result['choice'] == 'M' else 'Feet'}")
+        return result["choice"]
+
     def ensure_excel_window_visible(self):
         """Ensure Excel window is open and visible, else show error and exit."""
+        self._hide_console()
         print("[EXCEL] Checking for Excel window...")
         try:
             excel_windows = gw.getWindowsWithTitle("Excel")
@@ -215,12 +281,13 @@ class HEWPwritter:
         driver = self.driver
         wait = self.wait
         suffix = f"_ctl{row_index}"
-
+        self._show_console()
         print(f"[DEBUG] Filling portal row: index={row_index}, data={row_data}")
 
         try:
             print(f"[DEBUG] Locating unit element for row {row_index}...")
-            unit_elem = driver.find_element(By.ID, 'unit')
+            #unit_elem = driver.find_element(By.ID, 'lbltobeexecutedunit')
+            unit_elem = wait.until(EC.visibility_of_element_located((By.ID, 'lbltobeexecutedunit')))
             unit = unit_elem.text.strip().lower()
             print(f"[DEBUG] Unit for row {row_index}: {unit}")
 
@@ -259,6 +326,7 @@ class HEWPwritter:
                 print(f"[DEBUG] Number filled: {row_data.get('Number', '')}")
 
             if unit == 'cum':
+                print(f"[DEBUG] Unit is 'cum' for row {row_index}. Filling Length, Breadth, Depth.")
                 if 'Length' in row_data:
                     len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
                     print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
@@ -281,6 +349,7 @@ class HEWPwritter:
                     dep_elem.send_keys(str(row_data.get('Depth', '')))
                     print(f"[DEBUG] Depth filled: {row_data.get('Depth', '')}")
             elif unit == 'sqm':
+                print(f"[DEBUG] Unit is 'sqm' for row {row_index}. Filling Length, Breadth.")
                 if 'Length' in row_data:
                     len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
                     print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
@@ -296,6 +365,7 @@ class HEWPwritter:
                     br_elem.send_keys(str(row_data.get('Breadth', '')))
                     print(f"[DEBUG] Breadth filled: {row_data.get('Breadth', '')}")
             elif unit == 'rm':
+                print(f"[DEBUG] Unit is 'rm' for row {row_index}. Filling Length.")
                 if 'Length' in row_data:
                     len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
                     print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
@@ -304,6 +374,7 @@ class HEWPwritter:
                     len_elem.send_keys(str(row_data.get('Length', '')))
                     print(f"[DEBUG] Length filled: {row_data.get('Length', '')}")
             else:
+                print(f"[DEBUG] Unit is '{unit}' for row {row_index}. No Length/Breadth/Depth fields filled.")
                 if 'Quantity' in row_data:
                     qty_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtqty"
                     print(f"[DEBUG] Filling Quantity for row {row_index} using name {qty_name}")
@@ -361,10 +432,15 @@ class HEWPwritter:
 
     def load_selected_excel_data_no_headers(self):
         self.ensure_excel_window_visible()
+
+        # Ask user for unit selection
+        user_unit = self.ask_and_select_meter_or_feet_dialog()
+        
         print("[EXCEL] Simulating Ctrl+C in Excel...")
         pyautogui.hotkey('ctrl', 'c')
-        time.sleep(0.5)
+        time.sleep(0.3)
         print("[EXCEL] Reading data from clipboard (no headers)...")
+        self._show_console()
         try:
             df = pd.read_clipboard(sep='\t', header=None)
             expected_cols = ['Description', 'Number', 'Length', 'Breadth', 'Depth']
@@ -398,6 +474,9 @@ class HEWPwritter:
                         val_num = float(val)
                         # Check for nan and zero
                         if not math.isnan(val_num) and val_num != 0:
+                            # Convert feet to meter if user selected feet
+                            if user_unit == "F":
+                                val_num = round(val_num * 0.3048, 6)
                             values.append(val_num)
                     except Exception:
                         pass
@@ -411,7 +490,8 @@ class HEWPwritter:
                     'Number': int(num_val) if num_val.is_integer() else num_val,
                     'Length': values[0],
                     'Breadth': values[1],
-                    'Depth': values[2]
+                    'Depth': values[2],
+                    'Quantity': values[0]
                 })
 
             self.excel_rows = processed_rows
@@ -439,7 +519,7 @@ class HEWPwritter:
     def handle_confirmation_and_scrolling(self):
         """EXACT implementation as you specified"""
         print("[CONFIRM] Handling confirmation and scrolling...")
-        self.ensure_window_visible()
+        #self.ensure_window_visible()
         try:
             # Handle SweetAlert error and summary if present
 
@@ -510,6 +590,7 @@ class HEWPwritter:
             heading = error_modal.find_element(By.TAG_NAME, 'h2')
             print(f"[SUMMARY] Modal heading: '{heading.text.strip()}'")
             if heading.text.strip().lower() == "error":
+                #self.ensure_window_visible()
                 print("[SUMMARY] Quantity error detected. Handling error modal...")
                 # Click the OK button in the error modal
                 ok_btn = error_modal.find_element(By.CSS_SELECTOR, 'button.confirm')
@@ -536,10 +617,35 @@ class HEWPwritter:
                     self.driver.execute_script("arguments[0].scrollIntoView(true);", close_btn[0])
                     time.sleep(0.1)  # Let any animation finish
                     close_btn[0].click()
+                print("[SUMMARY] Clear Data button clicked. Waiting for page reload...")
+                # Wait for the page to reload
+                time.sleep(0.5)  # Wait for page to reload
+                self.clear_portal_fields() 
+                
+                self.ensure_window_visible()
+                time.sleep(0.3)  # Wait for page to reload   
+                ok_btn = self.driver.find_elements(By.CSS_SELECTOR, 'button.confirm')
+                if ok_btn and ok_btn[0].is_displayed():
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", ok_btn[0])
+                    time.sleep(0.1)  # Let any animation finish
+                    ok_btn[0].click()
+                
+
 
                 # Append the summary message at the top
                 print("[SUMMARY] Appending summary message to page.")
                 self.driver.execute_script("""
+                                           
+                    // Scroll to Description Details
+                        const hs = document.querySelectorAll('.cust-card-heading h4');
+                        for (const h of hs) {
+                            const t = h.textContent.trim();
+                            if (t === 'Description Details' || t.includes('Description Details')) {
+                                h.scrollIntoView({behavior: 'instant', block: 'start'});
+                                break;
+                            }
+                        }
+                                           
                     // Get elements for To Be Executed
                     const v = document.getElementById('lbltobeexecuted');
                     const u = document.getElementById('lbltobeexecutedunit');
@@ -603,7 +709,8 @@ class HEWPwritter:
                     }
                 """)
                 print("[SUMMARY] Summary message appended.")
-                time.sleep(1)  # Wait for the script to execute
+                time.sleep(0.2)  # Wait for the script to execute
+                sys.exit(1)
                 return False
             else:
                 print(f"[SUMMARY] Modal heading is not 'Error', got '{heading.text.strip()}'")
@@ -617,7 +724,7 @@ class HEWPwritter:
         print("[PROCESS] Starting main process workflow...")
         try:
             self.load_selected_excel_data_no_headers()
-            self.ensure_window_visible()
+            #self.ensure_window_visible()
             batch_size = 10
             total_rows = len(self.excel_rows)
             print(f"[PROCESS] Total rows to process: {total_rows}")
@@ -631,7 +738,7 @@ class HEWPwritter:
                 print(f"[PROCESS] Batch {start//batch_size+1} loaded from Excel and filled in portal.")
                 self.submit_data()
                 print("[PROCESS] Data submitted to portal.")
-                self.ensure_window_visible()
+                
                 if self.handle_quantity_error_and_summary():
                     print("[PROCESS] Quantity error handled. Stopping process.")
                     return False

@@ -277,11 +277,141 @@ class HEWPUploader:
         except Exception as e:
             print(f"Warning during confirmation handling: {str(e)}")
 
+    def handle_quantity_error_and_summary(self):
+        """Handle SweetAlert error for excess quantity and show summary message."""
+        print("[SUMMARY] Checking for quantity error and summary...")
+        try:
+            print("[SUMMARY] Waiting for SweetAlert error modal...")
+            # Wait for the SweetAlert error modal to appear
+            short_wait = WebDriverWait(self.driver, 5)
+            error_modal = short_wait.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, '.sweet-alert.showSweetAlert.visible'))
+            )
+            print("[SUMMARY] Error modal found.")
+            heading = error_modal.find_element(By.TAG_NAME, 'h2')
+            print(f"[SUMMARY] Modal heading: '{heading.text.strip()}'")
+            if heading.text.strip().lower() == "error":
+                print("[SUMMARY] Quantity error detected. Handling error modal...")
+                # Click the OK button in the error modal
+                ok_btn = error_modal.find_element(By.CSS_SELECTOR, 'button.confirm')
+                print("[SUMMARY] Clicking OK button in error modal.")
+                ok_btn.click()
+                time.sleep(0.5)
+                # Click the "Clear Data" button
+                print("[SUMMARY] Waiting for Clear Data button...")
+                copy_btn = self.driver.find_elements(By.ID, "btnclear")
+                if copy_btn and copy_btn[0].is_displayed():
+                    copy_btn[0].click()
+                    # Wait for the close button to be visible and clickable
+                    close_btn = self.wait.until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.btn.theme-btn--red[data-bs-dismiss="modal"]'))
+                    )
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", close_btn)
+                    time.sleep(0.1)  # Let any animation finish
+                    close_btn.click()
+
+                time.sleep(0.5)  # Wait for page to reload
+
+                close_btn = self.driver.find_elements(By.CSS_SELECTOR, 'button.btn.theme-btn--red[data-bs-dismiss="modal"]')
+                if close_btn and close_btn[0].is_displayed():
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", close_btn[0])
+                    time.sleep(0.1)  # Let any animation finish
+                    close_btn[0].click()
+
+                # Append the summary message at the top
+                print("[SUMMARY] Appending summary message to page.")
+                self.driver.execute_script("""
+                    // Scroll to Description Details
+                        const hs = document.querySelectorAll('.cust-card-heading h4');
+                        for (const h of hs) {
+                            const t = h.textContent.trim();
+                            if (t === 'Description Details' || t.includes('Description Details')) {
+                                h.scrollIntoView({behavior: 'instant', block: 'start'});
+                                break;
+                            }
+                        }    
+                                                                 
+                    // Get elements for To Be Executed
+                    const v = document.getElementById('lbltobeexecuted');
+                    const u = document.getElementById('lbltobeexecutedunit');
+                    
+                    // Get elements for Already Executed
+                    const executedQtyElem = document.getElementById('lblexecuted');
+                    const executedUnitElem = document.getElementById('lblexecutedunit');
+                    
+                    // Get Table Qty (Grand Qty)
+                    const grandQtyElem = document.getElementById('lblGrand_Qty');
+                    
+                    if (!v || !u || !executedQtyElem || !executedUnitElem ) {
+                        alert('Required fields not found. Contact @mrgargsir.');
+                        return;
+                    }
+                    
+                    const dn = parseFloat(v.textContent);
+                    const executedQty = executedQtyElem ? parseFloat(executedQtyElem.textContent) : 0;
+                    const grandQty = grandQtyElem ? parseFloat(grandQtyElem.textContent) : 0;
+                    
+                    if (isNaN(dn)) { alert('To Be Executed value is not a number.'); return; }
+                    if (isNaN(executedQty)) { alert('Executed value is not a number.'); return; }
+                    if (isNaN(grandQty)) { alert('Table Qty (Grand Qty) is not a number.'); return; }
+                    
+                    const unit = u.textContent.trim();
+                    const executedUnit = executedUnitElem.textContent.trim();
+                    
+                    if (unit !== executedUnit) {
+                        alert(`Unit mismatch! To Be Executed: ${unit}, Executed: ${executedUnit}`);
+                        return;
+                    }
+                    
+                    const al = (dn * 0.25).toFixed(3);
+                    const total = (dn * 1.25).toFixed(3);
+                    const remainingQty = (parseFloat(total) - executedQty).toFixed(3);
+                    const pendingQty = (parseFloat(remainingQty) - grandQty).toFixed(3);
+                    
+                    const msg = `
+                    🚨 **Extra Quantity Alert** 🚨
+                ⚖️ DNIT QTY          = ${dn} ${unit}
+                ➕ ALLOWANCE (25%)  = ${al} ${unit}
+                ✅ TOTAL            = ${total} ${unit}
+                ➖ EXECUTED QTY    = ${executedQty} ${unit}
+                📌 REMAINING QTY   = ${remainingQty} ${unit}
+                ➖ TABLE QTY       = ${grandQty} ${unit}
+                🔄 PENDING QTY     = ${pendingQty} ${unit}
+                    `;
+                    
+                    try {
+                        alert(msg);
+                    } catch (err) {
+                        if (Notification.permission === 'granted') {
+                            new Notification(msg);
+                        } else if (Notification.permission !== 'denied') {
+                            Notification.requestPermission().then(p => {
+                                p === 'granted' ? new Notification(msg) : alert(msg);
+                            });
+                        } else {
+                            alert(msg);
+                        }
+                    }
+                """)
+                print("[SUMMARY] Summary message appended.")
+                return True
+            else:
+                print(f"[SUMMARY] Modal heading is not 'Error', got '{heading.text.strip()}'")
+        except Exception as e:
+            print(f"[SUMMARY] No quantity error detected or error modal not found. ({e})")
+            # print(self.driver.page_source)  # Uncomment for debugging
+        return False
+
     def process_item(self):
         """Main workflow with window management"""
         print("[PROCESS] Starting main workflow")
         try:
             self.upload_pdf()
+            self.ensure_window_visible()  # Ensure Chrome is visible before proceeding
+            # Handle quantity error and summary after both steps
+            if self.handle_quantity_error_and_summary():
+                print("[PROCESS] Quantity error handled. Stopping process.")
+                return False  # Stop further processing if error handled
             self.handle_confirmation_and_scrolling()
             print("[PROCESS] Upload and confirmation steps complete")
             
