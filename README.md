@@ -13,16 +13,12 @@ Check for Updated HEWP Tools Utility Available : [Click here for Manually Downlo
 
 Click on the Office Button -> Excel Options -> Trust Center -> Trust Center Setting -> Trusted Locations. Then you add  folder (C:\MRGARGSIR) as a trusted location.
 
-# 2. Manually import ** bookmarks_6_3_25.html ** into chrome.
-
-		OR
 
 # 2. **MRGARGSIR Tools - Chrome Extension Setup Guide**  
 
 🚀 **A productivity extension for HEWP (Haryana Engineering Works Portal) automation.**  
 📌 **Developer:** **MRGARGSIR**  
 
-# There is also Chrome Extension Available
 ## 📦 Download
 	
  Check Once if Updated Extension Available : [Click here for released Version](https://github.com/mrgargsir/HEWPContractorextension/releases/latest)
@@ -33,7 +29,7 @@ Click on the Office Button -> Excel Options -> Trust Center -> Trust Center Sett
 
 ## **📥 How to Install (Manual Setup)**  
 
-### **Step 1: Extract the Extension**  
+### **Step 1: Extract the Extension if not already Extracted**  
 1. Go to  **`C:\MRGARGSIR\OtherFiles\ChromeExtension.zip`**   
 2. Extract it to **`C:\MRGARGSIR\OtherFiles\ChromeExtension`**
 
@@ -50,42 +46,22 @@ Click on the Office Button -> Excel Options -> Trust Center -> Trust Center Sett
 
 ---
 
-## **🔧 Main Features**  
+## **🔧 Main Features of ChromeExtension**  
 
 ✔ **One-Click Login** – Auto-login for HEWP Contractor Portal.  
 ✔ **Quick Bill Submission** – Directly navigate to "Submit Bill to JE."  
 ✔ **Smart Tender Search** – Enhanced dropdown search for tenders.  
 ✔ **Excel Automation** – Auto-upload, copy, and process Excel data.  
 ✔ **Quick Actions** – Shortcuts for:  
-   - **🎯 Select Item** (Highlights the input field)  
-   - **🆕 View Entries** (Auto-clicks the entries radio button)  
-   - **✅ DONE** (Confirms modals and resets the view)
+   - **🎯 Enter Button Fixes** (Pressing Enter button will not clear the form on hewp portal anymore)  
+   - **🆕 Volume Increase** (Volume increase features when low volume media is problem)  
+   - **✅ Dark Mode** (Enable Dark mode on all websites)
    - ** Many more****
-     
-📝 Auto Excel Upload – Instructions
-For the Auto Excel Upload feature to work:
 
-➡️ Complete all steps in the Bill Process up to selecting the HSR Item Number.
-🖱️ Then, use the upload buttons provided in the Excel Add-Ins (installed in your Excel) to trigger the automatic upload.
-
-💡 Make sure your Excel Add-In is installed and enabled before proceeding.
----
-
-## **⚠️ Important Notes**  
-- **This extension only modifies bookmarks for its own tools.**  
-- **Works only on HEWP portal (`https://works.haryana.gov.in`).**  
-- **Developer:** **MRGARGSIR** – For support, contact the developer.  
 
 ---
 
-### **🎉 Ready to Use!**  
-After installation, check your **Bookmarks Bar** for the Bookmarks.  
-
-Thanks! Based on your input, here’s a refined and **professional description** emphasizing that **most features are integrated into the Excel Add-In ribbon**, while some enhancements are browser-based via the Chrome extension.
-
----
-
-### 🧩 HEWPExcelADDins – Complete Toolkit for Haryana Engineering Works Portal (HEWP)
+# 🧩 HEWPExcelADDins – Complete Toolkit for Haryana Engineering Works Portal (HEWP)
 
 **HEWPExcelADDins** is an all-in-one **Excel Add-In** and **Chrome Extension** designed to streamline work on the **Haryana Engineering Works Portal (HEWP)**. It brings powerful automation, smart templates, and web shortcuts—making the workflow seamless for both **Contractors** and **Employees**.
 
@@ -99,16 +75,59 @@ Thanks! Based on your input, here’s a refined and **professional description**
 * **📥 Auto Item Fetcher** – Auto-fill **Item No., Description, Rate, Rate Type, Unit** from HSR data.
 * **📌 Smart Copy-Paste** – Automatically copy Excel data into the correct template columns.
 * **🧠 Intelligent Data Arrangement** – Minimizes user input errors, ensuring **0% chance of misalignment**.
-* **📤 One-Click Uploader** – Upload completed Excel templates directly to the HEWP portal.
+
 * **🧮 Built-In Tools** – Includes a **Unit Converter** and HSR utilities.
+
+* **🧭 Search Bars on HEWP Portal** – Adds a real-time **HSR Item Search** and **Tender Search** directly to the site.
+
+---
+# 📦 Excel Add-ins: Productivity Suite for Civil Engineers in Haryana
+
+Enhance your Excel experience with powerful tools tailored for civil engineering workflows, especially bill preparation and portal interaction.
 
 ---
 
-#### 🌐 Web Enhancements (via Chrome Extension):
+### #### 🌐 Excel Enhancements (First Tab: **`MRGARGSIR`**)
 
-* **🔖 Chrome Bookmarks Shortcuts** – Quick links to key portal sections (Login, Bill Submission, Tender/Item Search).
-* **🧭 Search Bars on HEWP Portal** – Adds a real-time **HSR Item Search** and **Tender Search** directly to the site.
-* **🖱️ Auto Navigation Clicks** – Automates repetitive steps and clicks on the portal.
+**📤 One-Click TOOLS** – A comprehensive Excel utility tab for generating bills, estimates, and engineering documents.
+
+#### ✅ Features in the **MRGARGSIR** Tab:
+
+1. **Jump to First Sheet** – Quickly navigate back to the first sheet in a workbook with many sheets.
+2. **Refresh Sheet** – Instantly refresh the current sheet in case Excel becomes unresponsive.
+3. **Insert Row** – Insert any number of rows at the selected cell with ease.
+4. **Copy Current Worksheet** – Create duplicates of the active sheet quickly.
+5. **Feet ⇄ Meter Converter** – Convert  imperial to metric unit with one click.
+6. **Meter ⇄ Feet Converter** – Convert  metric to imperial unit with one click.
+7. **Toggle Sign** – Instantly switch selected values between positive and negative.
+8. **Formulas To Constant** – Convert all formulas in the sheet to static values.
+9. **Multiply and Get Quantity** – Multiply dimensions (length × breadth × depth) and Numbers .
+10. **Total Quantity + Unit Converter** – Do Total of One item quantities and put in below row then auto convert to metric units where required and put in below row of total.
+11. **Rate & Description Fetcher** – Automatically pull Unit, Rates, Rate Type, and Descriptions from HSR (Haryana Schedule of Rates) and insert for each item.
+12. **Amount Calculator** – Compute amounts by multiplying rate × quantity. Also auto-calculates GST, contingency, and grand total with full sheet formatting.
+13. **Auto Serial Numbering** – Dynamically apply serial numbers to each item. Numbers auto-update on insert/delete.
+14. **Steel Weight Calculator** – Convert running meters Rebar Length to kilograms based on entered diameter and put this value below of selected total row cell .
+15. **Steel Summary Generator** – Create a steel usage summary below the current sheet.
+16. **Bill Summary** – Generate a complete summary in a new sheet. If a portal-downloaded summary is open, it auto fetch ,compares and highlights differences.
+
+---
+
+### #### 🌐 Web Enhancements (Second Tab: **`v6.50`**)
+
+**📤 One-Click Uploader** – Interact directly with the HEWP Portal from Excel.
+
+#### 🔧 Features in the **v6.50** Tab:
+
+1. **Auto Login to HEWP Portal** – Securely log in with saved credentials.
+2. **Close Chrome & Clean Resources** – Closes browser sessions and frees memory.
+3. **Copy Data to Template** – Automatically transfers data into the HEWP Excel template.
+4. **Item Number Selector** – Select item numbers on Portal for filling or uploading.
+5. **Upload Template to Portal** – Upload your completed template directly.
+6. **Direct Data Entry** – Skip the template; enter data directly into the portal Table.
+7. **Auto Upload Full Bill/Template** – Automatically upload The Whole Bill.
+8. **Website Data Scraper** – Download completed bill data from the portal in Excel Format, including a summary sheet.
+9. **Delete Bill Data** – Remove all previously filled bill data items in one click on portal.
+
 
 ---
 
@@ -119,6 +138,8 @@ Thanks! Based on your input, here’s a refined and **professional description**
 * **Simple setup with zero technical skills required**
 
 ---
+## Below Details are for Advance Users , You Can Skip this.
+
 for DATA Screber 
 
 pip install selenium pandas openpyxl beautifulsoup4 requests webdriver-manager tqdm
