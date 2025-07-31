@@ -216,7 +216,7 @@ class HEWPLogin:
 
         required_modules = [
             "selenium", "pyautogui", "pyperclip", "pygetwindow",
-            "pytesseract", "openpyxl"
+            "pytesseract", "openpyxl",  "tkinter", "pandas", "tqdm", "webdriver_manager", "re"
         ]
         missing = []
         for mod in required_modules:

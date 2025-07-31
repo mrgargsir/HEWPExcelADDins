@@ -772,6 +772,7 @@ class HEWPSetItem:
             if not item_number:
                 return
             self.ensure_subhead_selected()  # Ensure ddltender is selected before item selection
+            self.ensure_window_visible()  # Ensure Chrome window is visible
             self.ensure_final_date()  # Ensure final date is set if applicable
             self.search_and_select_item(item_number)
             

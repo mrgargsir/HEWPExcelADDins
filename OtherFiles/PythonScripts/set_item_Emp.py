@@ -263,15 +263,17 @@ class HEWPUploader:
 
         # OK & Cancel Buttons
         result = {"value": None}
-        def on_ok():
+       
+        def on_ok(event=None):
             result["value"] = var.get().strip()
             win.destroy()
             root.quit()
-        def on_cancel():
+        def on_cancel(event=None):
             result["value"] = None
             win.destroy()
             root.quit()
             sys.exit(0)
+       
 
         entry.bind('<Return>', on_ok)
 
@@ -859,6 +861,7 @@ class HEWPUploader:
             if not item_number:
                 return
             self.ensure_subhead_selected()  # Ensure ddlsubhead is selected before item selection
+            self.ensure_window_visible()  # Ensure Chrome window is visible
             self.search_and_select_item(item_number)
             self.select_rate_type_with_script(rate_type)  # Pass rate_type here
 
