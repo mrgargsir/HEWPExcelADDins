@@ -8,7 +8,7 @@ import pandas as pd
 import pyautogui
 import pyperclip
 import pygetwindow as gw
-from tkinter import messagebox
+from tkinter import messagebox, Tk, simpledialog
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -21,8 +21,11 @@ from selenium.webdriver.chrome.service import Service
 from tqdm import tqdm
 import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Alignment, Font as XLFont
 import re
+import tkinter as tk
+from tkinter import ttk, messagebox
+from tkinter.font import Font
 
 class HaryanaEBillingScraper:
     def __init__(self, website_url):
@@ -340,7 +343,19 @@ class HaryanaEBillingScraper:
         ]
         print(f"Found {len(main_heads)} Main Head options (excluding empty/'Select One')")
 
-        for main_head in tqdm(main_heads, desc="Main Heads"):
+        # Select main head
+        if not main_heads:
+            print("No Main Head options found.")
+            return
+
+        if len(main_heads) == 1:
+            selected_main_heads = [main_heads[0]]
+            print(f"Only one Main Head found: {main_heads[0]['text']}. Selecting automatically.")
+        else:
+            selected = select_option(main_heads, "Select Main Head", "Multiple Main Heads found. Please select one:")
+            selected_main_heads = [selected]
+
+        for main_head in tqdm(selected_main_heads, desc="Main Heads"):
             print(f"\nProcessing Main Head: {main_head['text']}")
 
             if not self.safe_select_dropdown("ddlcomp", main_head['value']):
@@ -353,7 +368,18 @@ class HaryanaEBillingScraper:
             ]
             print(f"├─ Found {len(sub_heads)} Sub Head options (excluding empty/'Select One')")
 
-            for sub_head in sub_heads:
+            if not sub_heads:
+                print("No Sub Head options found.")
+                continue
+
+            if len(sub_heads) == 1:
+                selected_sub_heads = [sub_heads[0]]
+                print(f"Only one Sub Head found: {sub_heads[0]['text']}. Selecting automatically.")
+            else:
+                selected = select_option(sub_heads, "Select Sub Head", "Multiple Sub Heads found. Please select one:")
+                selected_sub_heads = [selected]
+
+            for sub_head in selected_sub_heads:
                 if not self.safe_select_dropdown("ddlsubhead", sub_head['value']):
                     continue
 
@@ -367,13 +393,10 @@ class HaryanaEBillingScraper:
                     if not self.safe_select_dropdown("ddlitemnumber", item['value']):
                         continue
 
-                    
                     print(f"├─ Processing Sub Head: {sub_head['text']} - Item: {item['text']}") 
                     # Extract data for this combination
                     quantity = self.extract_quantity()
                     table_data = self.extract_table_data()
-
-                   
 
                     # Combine all data with dropdown info
                     for row in table_data:
@@ -398,7 +421,7 @@ class HaryanaEBillingScraper:
 
         print(f"\n✔ Completed! Extracted {len(self.all_data)} total records")
 
-    def save_to_excel(self, filename="haryana_ebilling_data.xlsx"):
+    def save_to_excel(self, filename="haryana_ebilling_data.xlsx", selected_sub_head=None):
         """Save all collected data to Excel file with permission handling and summary sheet"""
         if not self.all_data:
             print("No data to save")
@@ -427,7 +450,8 @@ class HaryanaEBillingScraper:
                     # Create a backup filename if primary fails
                     timestamp = time.strftime("%Y%m%d_%H%M%S")
                     desktop_dir = os.path.join(os.path.expanduser('~'), 'Desktop')
-                    backup_filename = os.path.join(desktop_dir, f"haryana_ebilling_data_{timestamp}.xlsx")
+                    save_path = os.path.join(desktop_dir, f"haryana_ebilling_data_{timestamp}.xlsx")
+                    
 
                 with pd.ExcelWriter(save_path, engine='openpyxl') as writer:
                     # Always write main data
@@ -454,11 +478,18 @@ class HaryanaEBillingScraper:
 
                         summary.insert(0, "Sr. No.", range(1, len(summary) + 1))
 
-                        summary_sheet = writer.book.create_sheet("Portal Summary")
-                        summary_sheet.append(["Data from: Portal"])
+                        # Create the summary sheet
+                        workbook = writer.book
+                        summary_sheet = workbook.create_sheet("Portal Summary")
+
+                        # Add selected sub head to the summary title
+                        summary_title = "Data from: Portal"
+                        if selected_sub_head:
+                            summary_title += f" ({selected_sub_head})"
+                        summary_sheet.append([summary_title])
                         summary_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
                         cell = summary_sheet.cell(row=1, column=1)
-                        cell.font = Font(bold=True)
+                        cell.font = XLFont(bold=True)
                         cell.alignment = Alignment(horizontal="center")
 
                         summary_headers = ["Sr. No.", "HSR Item_Number", "Qty", "Unit", "Rate", "Amount"]
@@ -474,7 +505,7 @@ class HaryanaEBillingScraper:
 
                         for col in range(1, 6):
                             cell = summary_sheet.cell(row=summary_sheet.max_row, column=col)
-                            cell.font = Font(bold=True)
+                            cell.font = XLFont(bold=True)
 
                         # Auto-adjust column widths
                         for ws in [writer.sheets['Sheet1'], summary_sheet]:
@@ -527,6 +558,207 @@ class HaryanaEBillingScraper:
             print("skipped Closing browser session...")
             pass
 
+def select_option(options, title, prompt):
+    """Show a GUI selection window for options with enhanced UI/UX. Returns the selected option dict or None if cancelled."""
+    if len(options) == 1:
+        return options[0]
+
+    selected = {}
+
+    filtered_indices = list(range(len(options)))
+
+    def on_ok(event=None):
+        selection = listbox.curselection()
+        if selection:
+            idx = filtered_indices[selection[0]]
+            selected['option'] = [options[idx] for idx in selection] if multi_select else options[idx]
+            root.destroy()
+
+    def on_cancel(event=None):
+        selected['option'] = None if not multi_select else []
+        root.destroy()
+
+    def on_search(*args):
+        search_term = search_var.get().lower()
+        listbox.delete(0, tk.END)
+        filtered_indices.clear()
+        for i, opt in enumerate(options):
+            if search_term in opt['text'].lower():
+                display_text = f"{i+1}. {opt['text']}"
+                listbox.insert(tk.END, display_text)
+                filtered_indices.append(i)
+        # Restore selection if possible
+        if listbox.size() > 0:
+            listbox.selection_set(0)
+
+    def select_all(event=None):
+        listbox.selection_set(0, tk.END)
+        return "break"  # Prevent default behavior
+
+    def show_tooltip(event):
+        if tooltip_time_id:
+            root.after_cancel(tooltip_time_id)
+        widget = event.widget
+        index = widget.nearest(event.y)
+        if index >= 0:
+            bbox = widget.bbox(index)
+            if bbox and (event.x > bbox[0] and event.x < bbox[0] + bbox[2]):
+                text = widget.get(index)
+                if len(text) > 50:  # Only show tooltip for long texts
+                    def delayed_show():
+                        tooltip.config(text=text)
+                        tooltip.place(x=event.x_root - root.winfo_rootx() + 15,
+                                      y=event.y_root - root.winfo_rooty() + 15)
+                    tooltip_time_id = root.after(500, delayed_show)
+
+    def hide_tooltip(event):
+        if tooltip_time_id:
+            root.after_cancel(tooltip_time_id)
+        tooltip.place_forget()
+
+    def show_context_menu(event):
+        try:
+            index = listbox.nearest(event.y)
+            if index >= 0:
+                listbox.selection_clear(0, tk.END)
+                listbox.selection_set(index)
+                context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            context_menu.grab_release()
+
+    def copy_selected():
+        selection = listbox.curselection()
+        if selection:
+            root.clipboard_clear()
+            root.clipboard_append(options[selection[0]]['text'])
+
+    # Configuration
+    multi_select = False  # Set to True if you want multi-selection
+    min_width, min_height = 600, 300
+
+    root = tk.Tk()
+    root.title(title)
+    max_height = root.winfo_screenheight() - 100
+
+    # Calculate dynamic height
+    item_count = len(options)
+    dynamic_height = min(max(min_height, item_count * 20 + 150), max_height)
+
+    root.geometry(f"{min_width}x{dynamic_height}")
+    root.minsize(min_width, min(min_height, dynamic_height))
+    root.attributes("-topmost", True)
+
+    # Setup styles
+    style = ttk.Style()
+    style.theme_use('clam')
+
+    # Custom fonts
+    title_font = Font(family="Segoe UI", size=11, weight="bold")
+    text_font = Font(family="Segoe UI", size=10)
+    button_font = Font(family="Segoe UI", size=10, weight="bold")
+
+    style.configure('TButton', font=button_font, padding=5)
+    style.configure('Accent.TButton', background='#0078d7', foreground='white')
+    style.map('Accent.TButton',
+              background=[('active', '#005499'), ('pressed', '#003366')])
+    style.configure('TEntry', font=text_font, padding=5)
+    style.configure('TLabel', font=title_font)
+
+    # Main frame
+    main_frame = ttk.Frame(root, padding=15)
+    main_frame.grid(row=0, column=0, sticky="nsew")
+    root.rowconfigure(0, weight=1)
+    root.columnconfigure(0, weight=1)
+
+    # Prompt label
+    ttk.Label(main_frame, text=prompt).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 10))
+
+    # Search box
+    search_var = tk.StringVar()
+    search_box = ttk.Entry(main_frame, textvariable=search_var)
+    search_box.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+    search_var.trace_add('write', on_search)
+    search_box.focus_set()
+
+    # Listbox with scrollbar
+    list_frame = ttk.Frame(main_frame)
+    list_frame.grid(row=2, column=0, columnspan=2, sticky="nsew")
+    main_frame.rowconfigure(2, weight=1)
+    main_frame.columnconfigure(0, weight=1)
+
+    scrollbar = ttk.Scrollbar(list_frame)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    listbox = tk.Listbox(
+        list_frame,
+        font=text_font,
+        selectmode=tk.MULTIPLE if multi_select else tk.SINGLE,
+        yscrollcommand=scrollbar.set,
+        bg='white',
+        selectbackground='#0078d7',
+        selectforeground='white',
+        activestyle='none',
+        relief='flat',
+        highlightthickness=0
+    )
+    listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.config(command=listbox.yview)
+
+    # Populate list
+    for i, opt in enumerate(options):
+        listbox.insert(tk.END, f"{i+1}. {opt['text']}")
+    if listbox.size() > 0:
+        listbox.selection_set(0)
+
+    # Button frame (always at the bottom)
+    btn_frame = ttk.Frame(main_frame)
+    btn_frame.grid(row=9, column=0, columnspan=2, sticky="ew", pady=(5, 2))
+
+    ok_btn = ttk.Button(
+        btn_frame,
+        text="OK",
+        command=on_ok,
+        style='Accent.TButton'
+    )
+    ok_btn.pack(side=tk.LEFT, padx=(10, 5), ipadx=2, ipady=2)
+
+    cancel_btn = ttk.Button(
+        btn_frame,
+        text="Cancel",
+        command=on_cancel
+    )
+    cancel_btn.pack(side=tk.RIGHT, padx=(5, 10), ipadx=2, ipady=2)
+
+    # Tooltip
+    tooltip = ttk.Label(root, background="#ffffe0", relief=tk.SOLID, borderwidth=1, font=text_font)
+    tooltip_time_id = None
+
+    # Context menu
+    context_menu = tk.Menu(root, tearoff=0, font=text_font)
+    context_menu.add_command(label="Copy Text", command=copy_selected)
+
+    # Bindings
+    root.bind('<Return>', on_ok)
+    root.bind('<Escape>', on_cancel)
+    listbox.bind('<Double-1>', on_ok)
+    listbox.bind('<Control-a>', select_all)
+    listbox.bind('<Motion>', show_tooltip)
+    listbox.bind('<Leave>', hide_tooltip)
+    listbox.bind('<Button-3>', show_context_menu)
+    search_box.bind('<Control-a>', lambda e: search_box.selection_range(0, tk.END))
+
+    # Focus search box by default
+    search_box.focus_set()
+
+    root.protocol("WM_DELETE_WINDOW", on_cancel)
+    root.mainloop()
+
+    return selected.get('option', None if not multi_select else [])
+
+
+
+    
+
 # In your main function:
 def main():
     print("Haryana E-Billing Data Extractor")
@@ -564,6 +796,10 @@ def main():
         
         # Save and get the actual saved path
         saved_path = scraper.save_to_excel(filename)
+        
+        # After scraping, get the selected sub head (example: from the last scraped row)
+        selected_sub_head = scraper.all_data[-1]['Sub_Head'] if scraper.all_data else None
+        saved_path = scraper.save_to_excel(filename, selected_sub_head=selected_sub_head)
         
         # Auto-open the Excel file only if it exists
         if saved_path and os.path.exists(saved_path):
