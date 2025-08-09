@@ -108,7 +108,8 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 13. **Auto Serial Numbering** – Dynamically apply serial numbers to each item. Numbers auto-update on insert/delete.
 14. **Steel Weight Calculator** – Convert running meters Rebar Length to kilograms based on entered diameter and put this value below of selected total row cell .
 15. **Steel Summary Generator** – Create a steel usage summary below the current sheet.
-16. **Bill Summary** – Generate a complete summary in a new sheet. If a portal-downloaded summary is open, it auto fetch ,compares and highlights differences.
+16. **Bill Summary** – Generate a complete summary in a new sheet, next to active sheet. If a portal-downloaded summary is open, it auto fetch ,compares and highlights differences.
+17. **Quantity of Materials Summary** – Generate a complete Consumption summary in a new sheet, next to active sheet.
 
 ---
 
