@@ -6,8 +6,10 @@ import subprocess
 import importlib.util
 
 import tkinter as tk
+from threading import Timer
 from tkinter import messagebox, ttk, simpledialog
 import traceback
+
 
 import pyperclip
 import pygetwindow as gw
@@ -197,6 +199,26 @@ class HEWPSetItem:
         except Exception as e:
             print(f"Window management warning: {str(e)}")
 
+    def auto_close_info(self, title, message, timeout=2000):
+        root = tk.Tk()
+        root.withdraw()
+        win = tk.Toplevel(root)
+        win.title(title)
+        win.configure(bg="#f5f6fa")
+        win.resizable(False, False)
+        win.attributes('-topmost', True)
+        label = tk.Label(win, text=message, font=("Segoe UI", 13, "bold"), bg="#f5f6fa", fg="#222")
+        label.pack(padx=30, pady=30)
+        # Center window
+        win.update_idletasks()
+        width, height = win.winfo_width(), win.winfo_height()
+        x = (win.winfo_screenwidth() // 2) - (width // 2)
+        y = (win.winfo_screenheight() // 2) - (height // 2)
+        win.geometry(f"+{x}+{y}")
+        # Auto-close after timeout ms
+        win.after(timeout, win.destroy)
+        win.mainloop()
+        root.destroy()
 
     def ask_for_item_number(self):
         print("[INPUT] Asking for item number...")
@@ -620,7 +642,7 @@ class HEWPSetItem:
                     pass
                 break  # Exit loop if selection was successful
             print("[SELECT] Item selection complete.")
-            messagebox.showinfo("Item Selection", "Item selection complete.")
+            self.auto_close_info("Item Selection", "Item selection complete.", timeout=2000)
         except Exception as e:
             print(f"Error in select_rate_type_with_script: {e}")
             traceback.print_exc()
