@@ -254,6 +254,7 @@ class HaryanaEBillingScraper:
     def extract_table_data(self):
         """Extract all data from the main table"""
         try:
+        
             try:
                 savecheck_btn = self.wait.until(
                     EC.element_to_be_clickable((By.ID, "btn_Final_Save"))
@@ -262,6 +263,12 @@ class HaryanaEBillingScraper:
             except TimeoutException:
                 print("Page not loaded properly.")
                 return []
+            
+            # Get DNIT unit from lbltobeexecutedunit
+            try:
+                dnit_unit = self.driver.find_element(By.ID, "lbltobeexecutedunit").text.strip()
+            except Exception:
+                dnit_unit = ""
 
             try:
                 table = WebDriverWait(self.driver, 0.5).until(
@@ -269,7 +276,23 @@ class HaryanaEBillingScraper:
                 )
             except TimeoutException:
                 print("Table not found. Assuming all rows blanks.")
-                return []
+                # Return a row with only Total Quantity as per DNIT
+                table_data = []
+                table_data.append({
+                    'Description': '',
+                    'Number': '',
+                    'Length': '',
+                    'Breadth': '',
+                    'Depth': '',
+                    'Qty': '',
+                    'Unit': dnit_unit,
+                    'Rate_Type': '',
+                    'Rate': '',
+                    'Amount': '',
+                    'Quantity Previously Executed': ''
+                    
+                })
+                return table_data
             
             # Scroll to the table to ensure it's loaded
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", table)
@@ -326,6 +349,7 @@ class HaryanaEBillingScraper:
                         'Rate': rate,
                         'Amount': amount,
                         'Quantity Previously Executed': cells[9].text.strip()
+                        
                     })
             return table_data
         except Exception as e:
@@ -460,11 +484,12 @@ class HaryanaEBillingScraper:
                     try:
                         # --- SUMMARY SHEET LOGIC STARTS HERE ---
                         summary_cols = [
-                            "HSR Item_Number", "Qty", "Unit", "Rate", "Amount"
+                            "HSR Item_Number", "Qty", "Unit", "Rate", "Amount", "Total Quantity as per DNIT"
                         ]
                         df_summary = df.copy()
                         df_summary["Qty"] = pd.to_numeric(df_summary["Qty"], errors="coerce").fillna(0)
                         df_summary["Amount"] = pd.to_numeric(df_summary["Amount"], errors="coerce").fillna(0)
+                        df_summary["Total Quantity as per DNIT"] = pd.to_numeric(df_summary["Total Quantity as per DNIT"], errors="coerce").fillna(0)
 
                         summary = (
                             df_summary.groupby("HSR Item_Number", as_index=False)
@@ -472,7 +497,8 @@ class HaryanaEBillingScraper:
                                 "Qty": "sum",
                                 "Unit": "first",
                                 "Rate": "first",
-                                "Amount": "sum"
+                                "Amount": "sum",
+                                "Total Quantity as per DNIT": "sum"
                             })
                         )
 
@@ -487,12 +513,12 @@ class HaryanaEBillingScraper:
                         if selected_sub_head:
                             summary_title += f" ({selected_sub_head})"
                         summary_sheet.append([summary_title])
-                        summary_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
+                        summary_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=7)
                         cell = summary_sheet.cell(row=1, column=1)
                         cell.font = XLFont(bold=True)
                         cell.alignment = Alignment(horizontal="center")
 
-                        summary_headers = ["Sr. No.", "HSR Item_Number", "Qty", "Unit", "Rate", "Amount"]
+                        summary_headers = ["Sr. No.", "HSR Item_Number", "Qty", "Unit", "Rate", "Amount", "Total Quantity as per DNIT"]
                         summary_sheet.append(summary_headers)
 
                         for row in summary.itertuples(index=False):
@@ -500,7 +526,8 @@ class HaryanaEBillingScraper:
 
                         total_qty = summary["Qty"].sum()
                         total_amount = summary["Amount"].sum()
-                        total_row = ["Total", "", total_qty, "", "", total_amount]
+                        total_dnit = summary["Total Quantity as per DNIT"].sum()
+                        total_row = ["Total", "", total_qty, "", "", total_amount, total_dnit]
                         summary_sheet.append(total_row)
 
                         for col in range(1, 6):
