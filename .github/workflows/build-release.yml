@@ -70,9 +70,14 @@ jobs:
 
           # Split version parts, pad numbers
           IFS='.' read -r MAJOR MINOR PATCH <<< "$HIGH_VERSION"
+          MAJOR=$((10#$MAJOR))
+          MINOR=$((10#$MINOR))
+          PATCH=$((10#${PATCH:-0}))
+          
           MAJOR=$(printf "%02d" "$MAJOR")
           MINOR=$(printf "%02d" "$MINOR")
-          PATCH=$(printf "%03d" "${PATCH:-0}")
+          PATCH=$(printf "%03d" "$PATCH")
+
 
           echo "GitHub Event: $GITHUB_EVENT_NAME"
           BEFORE="${{ github.event.before }}"
