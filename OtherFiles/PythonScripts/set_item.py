@@ -199,7 +199,7 @@ class HEWPSetItem:
         except Exception as e:
             print(f"Window management warning: {str(e)}")
 
-    def auto_close_info(self, title, message, timeout=2000):
+    def auto_close_info(self, title, message, timeout=500):
         root = tk.Tk()
         root.withdraw()
         win = tk.Toplevel(root)
@@ -212,8 +212,10 @@ class HEWPSetItem:
         # Center window
         win.update_idletasks()
         width, height = win.winfo_width(), win.winfo_height()
-        x = (win.winfo_screenwidth() // 2) - (width // 2)
-        y = (win.winfo_screenheight() // 2) - (height // 2)
+        #x = (win.winfo_screenwidth() // 2) - (width // 2)
+        #y = (win.winfo_screenheight() // 2) - (height // 2)
+        x = (win.winfo_screenwidth()) - (width) - 10
+        y = ((win.winfo_screenheight()//7) *6) - (height ) -10
         win.geometry(f"+{x}+{y}")
         # Auto-close after timeout ms
         win.after(timeout, win.destroy)
@@ -642,7 +644,7 @@ class HEWPSetItem:
                     pass
                 break  # Exit loop if selection was successful
             print("[SELECT] Item selection complete.")
-            self.auto_close_info("Item Selection", "Item selection complete.", timeout=2000)
+            self.auto_close_info("Item Selection", "Item selection complete.", timeout=1000)
         except Exception as e:
             print(f"Error in select_rate_type_with_script: {e}")
             traceback.print_exc()

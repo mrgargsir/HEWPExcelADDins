@@ -186,6 +186,114 @@ class HaryanaEBillingScraper:
             print(f"❌ Browser connection failed: {str(e)}")
             sys.exit(1)
 
+    def _verify_logged_in(self):
+        """CHANGE: Verify login by checking lblusername text is non-empty"""
+        try:
+            user_elem = WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.ID, "lblusername"))
+            )
+            username = user_elem.text.strip()
+            print(f"[LOGIN] Username label: '{username}'")
+            return bool(username)
+        except Exception:
+            return False
+    def _switch_to_hewp_tab(self):
+        """CHANGE: Switch to a tab whose URL contains works.haryana.gov.in"""
+        for handle in self.driver.window_handles:  # [2][1][4]
+            self.driver.switch_to.window(handle)
+            url = self.driver.current_url
+            print(f"[TAB] Checking tab: {url}")
+            if "works.haryana.gov.in" in url:
+                print("[TAB] Switched to HEWP tab.")
+                return True
+        return False  # CHANGE
+    def _navigate_to_submit_bill(self):
+        """CHANGE: Navigate left menu to Submit Bill to JE → Est_Add_Items_emb.aspx"""
+        print("[NAV] Navigating to 'Submit Bill to JE' page ...")
+        try:
+            # Ensure window visible
+            self.ensure_window_visible()
+
+            # Sidebar anchor with href '#actmenucon' and text contains 'Submit Bill to JE'
+            sidebar_links = self.driver.find_elements(
+                By.XPATH,
+                "//a[contains(@href, '#actmenucon') and contains(., 'Submit Bill to JE')]"
+            )
+            sidebar_link = next((l for l in sidebar_links if l.is_displayed()), None)
+            if sidebar_link:
+                self.driver.execute_script("arguments.scrollIntoView();", sidebar_link)
+                try:
+                    sidebar_link.click()
+                except Exception:
+                    self.driver.execute_script("arguments.click();", sidebar_link)
+                print("[NAV] Sidebar 'Submit Bill to JE' clicked.")
+                time.sleep(1)
+            else:
+                print("[NAV] Sidebar 'Submit Bill to JE' not found.")
+
+            # Submenu link to Est_Add_Items_emb.aspx
+            submenu_links = self.driver.find_elements(
+                By.XPATH,
+                "//ul[contains(@id, 'actmenucon')]/li/a[contains(@href, '/E-Billing/Est_Add_Items_emb.aspx') and contains(., 'Submit Bill to JE')]"
+            )
+            submenu_link = next((l for l in submenu_links if l.is_displayed()), None)
+            if submenu_link:
+                self.driver.execute_script("arguments.scrollIntoView();", submenu_link)
+                try:
+                    submenu_link.click()
+                except Exception:
+                    self.driver.execute_script("arguments.click();", submenu_link)
+                print("[NAV] Submenu 'Submit Bill to JE' clicked.")
+                time.sleep(2)
+                return True  # CHANGE
+            else:
+                print("[NAV] Submenu 'Submit Bill to JE' link not found.")
+                return False  # CHANGE
+        except Exception as e:
+            print(f"[NAV] Navigation error: {e}")
+            return False  # CHANGE
+    def ensure_on_target_page(self):
+        """CHANGE: Gate: correct domain, logged in, and on the Submit Bill page with dropdowns present"""
+        print("[GATE] Ensuring correct domain/tab, login, and page context...")
+        current_url = ""
+        try:
+            current_url = self.driver.current_url
+        except Exception:
+            pass
+        print(f"[GATE] Current URL: {current_url}")
+
+        # 1) Domain/tab gate
+        if "works.haryana.gov.in" not in current_url:
+            print("[GATE] Not on works.haryana.gov.in, searching tabs...")
+            if not self._switch_to_hewp_tab():  # [2][1][4]
+                print("[GATE] No HEWP tab found; navigating to contractor home.")
+                self.driver.get("https://works.haryana.gov.in/contractor/contractorHome.aspx")
+                time.sleep(2)
+
+        # 2) Login gate
+        if not self._verify_logged_in():
+            print("[GATE] Not logged in. Please login in Chrome and rerun.")
+            messagebox.showerror("Login Required", "Please login to HEWP in Chrome, then rerun this tool.")
+            sys.exit(0)  # CHANGE: exit cleanly to avoid silent idle
+
+        # 3) Page identity gate: ensure dropdown page is open
+        # If ddlcomp (or ddltender) not present, navigate via sidebar
+        try:
+            self.driver.find_element(By.ID, "ddlcomp")
+            print("[GATE] Found ddlcomp.")
+        except NoSuchElementException:
+            print("[GATE] ddlcomp not found; trying to navigate to 'Submit Bill to JE' page.")
+            if not self._navigate_to_submit_bill():
+                messagebox.showerror("Navigation Error", "Could not open 'Submit Bill to JE' page. Please open it manually and rerun.")
+                sys.exit(0)  # CHANGE
+            # After navigation, wait for ddlcomp presence
+            try:
+                WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "ddlcomp")))
+                print("[GATE] ddlcomp present after navigation.")
+            except TimeoutException:
+                messagebox.showerror("Navigation Error", "Page did not load ddlcomp. Please try again.")
+                sys.exit(0)  # CHANGE
+        
     def ensure_window_visible(self):
         """Bring Chrome window to foreground if minimized"""
         print("[WINDOW] Ensuring Chrome window is visible...")
@@ -819,6 +927,7 @@ def main():
         print("[START] Starting the scraping process...")
             
         scraper.ensure_window_visible()
+        scraper.ensure_on_target_page()
         scraper.scrape_all_combinations()
         
         # Save and get the actual saved path
