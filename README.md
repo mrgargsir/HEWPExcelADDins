@@ -99,8 +99,8 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 4. **Copy Current Worksheet** – Create duplicates of the active sheet quickly.
 5. **Feet ⇄ Meter Converter** – Convert  imperial to metric unit with one click.
 6. **Meter ⇄ Feet Converter** – Convert  metric to imperial unit with one click.
-7. **Toggle Sign** – Instantly switch selected values between positive and negative.
-8. **Steel Weight Calculator** – Convert running meters Rebar Length to kilograms based on entered diameter and put this value below of selected total row cell .
+7. **Meter ⇄ Kg Converter** – Convert  Meter to Kilogram unit with One click.
+8. **Toggle Sign** – Instantly switch selected values between positive and negative.
 9. **Formulas To Constant** – Convert all formulas in the sheet to static values.
 10. **Insert Rows** – Insert any number of rows at selected cell.
 11. **Copy Active Sheet** – Make any number of copies of active sheet.
@@ -108,12 +108,13 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 13. **Total Quantity + Unit Converter** – Do Total of One item quantities and put in below row then auto convert to metric units where required and put in below row of total.
 14. **Rate & Description Fetcher** – Automatically pull Unit, Rates, Rate Type, and Descriptions from HSR (Haryana Schedule of Rates) and insert for each item.
 15. **Amount Calculator** – Compute amounts by multiplying rate × quantity. Also auto-calculates GST, contingency, and grand total with full sheet formatting.
-16. **Auto Serial Numbering** – Dynamically apply serial numbers to each item. Numbers auto-update on insert/delete.
-17. **Auto Round Off** – Dynamically apply round off formula to each selected cell. Existing Round off auto-update on apply.
-18. **Steel Summary Generator** – Create a steel usage summary in bottom of Bill/Estimate.
-19. **Bill Summary** – Generate a complete summary in a new sheet, next to active sheet. If a portal-downloaded summary is open, it auto fetch ,compares and highlights differences. it also works for Variation with DNIT QTY.
-20. **Consumption Table** – Generate a complete Consumption summary in a new sheet, next to active sheet.
-21. **Quantity of Materials Summary** – Generate a complete Consumption summary in bottom of Bill/Estimate.
+16. **Steel Weight Calculator** – Convert running meters Rebar Length to kilograms based on entered diameter and put this value below of selected total row cell .
+17. **Auto Serial Numbering** – Dynamically apply serial numbers to each item. Numbers auto-update on insert/delete.
+18. **Auto Round Off** – Dynamically apply round off formula to each selected cell. Existing Round off auto-update on apply.
+19. **Steel Summary Generator** – Create a steel usage summary in bottom of Bill/Estimate.
+20. **Bill Summary** – Generate a complete summary in a new sheet, next to active sheet. If a portal-downloaded summary is open, it auto fetch ,compares and highlights differences. it also works for Variation with DNIT QTY.
+21. **Consumption Table** – Generate a complete Consumption summary in a new sheet, next to active sheet.
+22. **Quantity of Materials Summary** – Generate a complete Consumption summary in bottom of Bill/Estimate.
 
 ---
 
