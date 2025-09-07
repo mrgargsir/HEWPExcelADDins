@@ -100,16 +100,20 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 5. **Feet ⇄ Meter Converter** – Convert  imperial to metric unit with one click.
 6. **Meter ⇄ Feet Converter** – Convert  metric to imperial unit with one click.
 7. **Toggle Sign** – Instantly switch selected values between positive and negative.
-8. **Formulas To Constant** – Convert all formulas in the sheet to static values.
-9. **Multiply and Get Quantity** – Multiply dimensions (length × breadth × depth) and Numbers .
-10. **Total Quantity + Unit Converter** – Do Total of One item quantities and put in below row then auto convert to metric units where required and put in below row of total.
-11. **Rate & Description Fetcher** – Automatically pull Unit, Rates, Rate Type, and Descriptions from HSR (Haryana Schedule of Rates) and insert for each item.
-12. **Amount Calculator** – Compute amounts by multiplying rate × quantity. Also auto-calculates GST, contingency, and grand total with full sheet formatting.
-13. **Auto Serial Numbering** – Dynamically apply serial numbers to each item. Numbers auto-update on insert/delete.
-14. **Steel Weight Calculator** – Convert running meters Rebar Length to kilograms based on entered diameter and put this value below of selected total row cell .
-15. **Steel Summary Generator** – Create a steel usage summary below the current sheet.
-16. **Bill Summary** – Generate a complete summary in a new sheet, next to active sheet. If a portal-downloaded summary is open, it auto fetch ,compares and highlights differences.
-17. **Quantity of Materials Summary** – Generate a complete Consumption summary in a new sheet, next to active sheet.
+8. **Steel Weight Calculator** – Convert running meters Rebar Length to kilograms based on entered diameter and put this value below of selected total row cell .
+9. **Formulas To Constant** – Convert all formulas in the sheet to static values.
+10. **Insert Rows** – Insert any number of rows at selected cell.
+11. **Copy Active Sheet** – Make any number of copies of active sheet.
+12. **Multiply and Get Quantity** – Multiply dimensions (length × breadth × depth) and Numbers.
+13. **Total Quantity + Unit Converter** – Do Total of One item quantities and put in below row then auto convert to metric units where required and put in below row of total.
+14. **Rate & Description Fetcher** – Automatically pull Unit, Rates, Rate Type, and Descriptions from HSR (Haryana Schedule of Rates) and insert for each item.
+15. **Amount Calculator** – Compute amounts by multiplying rate × quantity. Also auto-calculates GST, contingency, and grand total with full sheet formatting.
+16. **Auto Serial Numbering** – Dynamically apply serial numbers to each item. Numbers auto-update on insert/delete.
+17. **Auto Round Off** – Dynamically apply round off formula to each selected cell. Existing Round off auto-update on apply.
+18. **Steel Summary Generator** – Create a steel usage summary in bottom of Bill/Estimate.
+19. **Bill Summary** – Generate a complete summary in a new sheet, next to active sheet. If a portal-downloaded summary is open, it auto fetch ,compares and highlights differences. it also works for Variation with DNIT QTY.
+20. **Consumption Table** – Generate a complete Consumption summary in a new sheet, next to active sheet.
+21. **Quantity of Materials Summary** – Generate a complete Consumption summary in bottom of Bill/Estimate.
 
 ---
 
@@ -121,13 +125,16 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 
 1. **Auto Login to HEWP Portal** – Securely log in with saved credentials.
 2. **Close Chrome & Clean Resources** – Closes browser sessions and frees memory.
-3. **Copy Data to Template** – Automatically transfers data into the HEWP Excel template.
+3. **Copy Data to Template** – Automatically convert unit to Meter and transfers data into the HEWP Excel template.
 4. **Item Number Selector** – Select item numbers on Portal for filling or uploading.
-5. **Upload Template to Portal** – Upload your completed template directly.
-6. **Direct Data Entry** – Skip the template; enter data directly into the portal Table.
-7. **Auto Upload Full Bill/Template** – Automatically upload The Whole Bill.
-8. **Website Data Scraper** – Download completed bill data from the portal in Excel Format, including a summary sheet.
-9. **Delete Bill Data** – Remove all previously filled bill data items in one click on portal.
+5. **Pdf** – Make Pdf of Selection and Upload With Manual Entry.
+6. **Upload Template to Portal** – Upload your completed template directly.
+7. **Direct Data Entry** – Skip the template; enter data directly into the portal Table.
+8. **Emp Item Number Selector** – Select item numbers and Rate Type for Employ id on Portal for filling or uploading.
+9. **Website Data Scraper** – Download completed bill data from the portal in Excel Format, including a summary sheet.
+10. **Delete Bill Data** – Remove all previously filled bill data items in one click on portal.
+11. **Copy Data to Template** – Automatically transfers data into the HEWP Excel template without unit conversion.
+12. **Auto Upload Full Bill/Template** – Automatically upload The Whole Bill.
 
 
 ---
