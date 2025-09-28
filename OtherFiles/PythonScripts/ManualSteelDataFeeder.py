@@ -250,7 +250,7 @@ class HEWPwritter:
         driver = self.driver
         wait = self.wait
         suffix = f"_ctl{row_index}"
-        self._show_console()
+        self._hide_console()
         print(f"[DEBUG] Filling portal row: index={row_index}, data={row_data}")
 
         try:
