@@ -20,7 +20,8 @@ import pygetwindow as gw
 class HEWPwritter:
     def __init__(self):
         print("[INIT] Initializing HEWPwritter...")
-        
+
+        self.pdf_path = r"C:\MRGARGSIR\annex.pdf"
         self.notification_root = None
         self._chrome_was_launched = False
 
@@ -198,62 +199,29 @@ class HEWPwritter:
         except Exception as e:
             print(f"Window management warning: {str(e)}")
 
-    def ask_and_select_meter_or_feet_dialog(self):
-        """Ask user for Meter/Feet selection with three buttons and select the radio button in the portal."""
-        import tkinter as tk
-
-        result = {"choice": None}
-
-        def select_meter():
-            result["choice"] = "M"
-            root.destroy()
-
-        def select_feet():
-            result["choice"] = "F"
-            root.destroy()
-
-        def cancel():
-            result["choice"] = None
-            root.destroy()
-
-        root = tk.Tk()
-        root.title("Unit Selection")
-        root.resizable(False, False)
-        root.attributes("-topmost", True)
-
-        # Center the window on the screen
-        window_width = 400
-        window_height = 140
-        screen_width = root.winfo_screenwidth()
-        screen_height = root.winfo_screenheight()
-        x = int((screen_width / 2) - (window_width / 2))
-        y = int((screen_height / 2) - (window_height / 2))
-        root.geometry(f"{window_width}x{window_height}+{x}+{y}")
-
-        label = tk.Label(root, text="UNIT OF MESSURMENT ?", font=("Arial", 11))
-        label.pack(pady=(20, 10))
-
-        btn_frame = tk.Frame(root)
-        btn_frame.pack(pady=10)
-
-        btn_meter = tk.Button(btn_frame, text="Meter", width=10, command=select_meter)
-        btn_meter.grid(row=0, column=0, padx=8)
-
-        btn_feet = tk.Button(btn_frame, text="Feet", width=10, command=select_feet)
-        btn_feet.grid(row=0, column=1, padx=8)
-
-        btn_cancel = tk.Button(btn_frame, text="Cancel", width=10, command=cancel)
-        btn_cancel.grid(row=0, column=2, padx=8)
-
-        root.mainloop()
-
-        if result["choice"] not in ("M", "F"):
-            print("[UNIT] Selection cancelled by user.")
-            self.close()
-            sys.exit(0)
-
-        print(f"[UNIT] User selected: {'Meter' if result['choice'] == 'M' else 'Feet'}")
-        return result["choice"]
+    def upload_pdf(self):
+        """Selenium-only file upload approach"""
+        print("[UPLOAD] Starting PDF upload process")
+        self.ensure_window_visible()
+        try:
+            print("[UPLOAD] Waiting for file input element")
+            file_input = self.wait.until(
+                EC.presence_of_element_located((By.ID, "FileUpload3"))
+            )
+            print(f"[UPLOAD] Sending file path: {self.pdf_path}")
+            file_input.send_keys(os.path.abspath(self.pdf_path))
+            print("[UPLOAD] Waiting for upload button")
+            upload_button = self.wait.until(
+                EC.element_to_be_clickable((By.ID, "btn_add_Description"))
+            )
+            print("[SUBMIT] Found 'Add Items to List' button. Clicking...")
+            upload_button.click()
+            time.sleep(1)
+            print("[UPLOAD] PDF upload completed")
+        except Exception as e:
+            print(f"[UPLOAD] File upload failed: {str(e)}")
+            messagebox.showerror("Upload Error", f"File upload failed: {str(e)}")
+            raise
 
     def ensure_excel_window_visible(self):
         """Ensure Excel window is open and visible, else show error and exit."""
@@ -305,7 +273,8 @@ class HEWPwritter:
                     length = float(row_data.get('Length', 1) or 1)
                     breadth = float(row_data.get('Breadth', 1) or 1)
                     depth = float(row_data.get('Depth', 1) or 1)
-                    product = num * length * breadth * depth
+                    Quantity = float(row_data.get('Quantity', 1) or 1)
+                    product = num * length * breadth * depth * Quantity
                     ddl_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:ddlplusminus"
                     ddl_elem = driver.find_element(By.NAME, ddl_name)
                     if product < 0:
@@ -432,90 +401,38 @@ class HEWPwritter:
 
     def load_selected_excel_data_no_headers(self):
         self.ensure_excel_window_visible()
-
-        # Ask user for unit selection
-        user_unit = self.ask_and_select_meter_or_feet_dialog()
-        
-        print("[EXCEL] Simulating Ctrl+C in Excel...")
-        pyautogui.hotkey('ctrl', 'c')
         time.sleep(0.3)
-        print("[EXCEL] Reading data from clipboard (no headers)...")
+        print("[EXCEL] Reading Quantity from clipboard...")
         self._show_console()
         try:
-            df = pd.read_clipboard(sep='\t', header=None)
-            expected_cols = ['Description', 'Number', 'Length', 'Breadth', 'Depth']
-            df.columns = expected_cols[:df.shape[1]]
-            print(f"[EXCEL] DataFrame loaded with columns: {df.columns.tolist()} and {len(df)} rows.")
+            clipboard_text = pyperclip.paste().strip()
+            if not clipboard_text:
+                print("[EXCEL] Clipboard is empty.")
+                self.excel_rows = []
+                return
+            try:
+                quantity_val = round(float(clipboard_text),3)
+            except Exception:
+                print(f"[EXCEL] Clipboard value '{clipboard_text}' is not a valid number.")
+                self.excel_rows = []
+                return
 
-            processed_rows = []
-            for idx, row in df.iterrows():
-                print(f"[EXCEL] Processing row {idx+1}: {row.values}")
-                desc = str(row['Description']).strip() if pd.notna(row['Description']) else ""
-                if not desc:
-                    desc = "."
-                num = row['Number']
-                if pd.isna(num):
-                    print(f"[EXCEL] Skipping row {idx+1}: Number is blank.")
-                    continue
-                try:
-                    num_val = round(float(num), 3)  # <-- ROUND HERE
-                except Exception:
-                    print(f"[EXCEL] Skipping row {idx+1}: Number is not a valid float.")
-                    continue
-                if num_val == 0:
-                    print(f"[EXCEL] Skipping row {idx+1}: Number is zero.")
-                    continue
-
-                # Shift non-zero, non-blank values left for Length, Breadth, Depth
-                values = []
-                for col in ['Length', 'Breadth', 'Depth']:
-                    val = row[col]
-                    try:
-                        val_num = float(val)
-                        # Check for nan and zero
-                        if not math.isnan(val_num) and val_num != 0:
-                            # Convert feet to meter if user selected feet
-                            if user_unit == "F":
-                                val_num = round(val_num * 0.3048, 6)
-                            val_num = round(val_num, 3)  # <-- ROUND HERE
-                            values.append(val_num)
-                    except Exception:
-                        pass
-                while len(values) < 3:
-                    values.append(0)
-                values = values[:3]
-                print(f"[EXCEL] Row {idx+1} processed as: Description={desc}, Number={num_val}, Length={values[0]}, Breadth={values[1]}, Depth={values[2]}")
-
-                processed_rows.append({
-                    'Description': desc,
-                    'Number': int(num_val) if num_val.is_integer() else num_val,
-                    'Length': values[0],
-                    'Breadth': values[1],
-                    'Depth': values[2],
-                    'Quantity': values[0]
-                })
-
-            self.excel_rows = processed_rows
-            print(f"[EXCEL] Loaded {len(self.excel_rows)} processed rows from clipboard selection (no headers).")
+            print(f"[EXCEL] Quantity read from clipboard: {quantity_val}")
+            # Prepare single row data
+            self.excel_rows = [{
+                'Description': "Steel Weight (PFA)",
+                'Number': 1,
+                'Quantity': quantity_val,
+                'Length': 0,
+                'Breadth': 0,
+                'Depth': 0
+            }]
+            print("[EXCEL] Single row prepared for portal entry.")
         except Exception as e:
             print(f"[EXCEL] Failed to read clipboard data: {e}")
             self.excel_rows = []
 
-    def submit_data(self): 
-        """Click 'Add Items to List' button after filling row data"""
-        driver = self.driver
-        wait = self.wait
-        print("[SUBMIT] Attempting to submit data to portal...")
-        try:
-            add_btn = driver.find_element(By.ID, 'btn_add_Description')
-            print("[SUBMIT] Found 'Add Items to List' button. Clicking...")
-            add_btn.click()
-            # wait.until(EC.invisibility_of_element_located((By.ID, 'loadingSpinner')))
-            time.sleep(0.5)  # Wait for any animations to finish
-            print("[SUBMIT] Row added to portal.")
-            print("[SUBMIT] Row submitted to portal.")
-        except Exception as e:
-            print(f"[SUBMIT] Failed to submit row: {e}")
+    
 
     def handle_confirmation_and_scrolling(self):
         """EXACT implementation as you specified"""
@@ -721,32 +638,32 @@ class HEWPwritter:
         return False
 
     def process_data(self):
-        """Main workflow with window management and 10-row batching"""
+        """Main workflow for single row processing (no batching)"""
         print("[PROCESS] Starting main process workflow...")
         try:
             self.load_selected_excel_data_no_headers()
-            #self.ensure_window_visible()
-            batch_size = 10
             total_rows = len(self.excel_rows)
             print(f"[PROCESS] Total rows to process: {total_rows}")
-            for start in range(0, total_rows, batch_size):
-                batch = self.excel_rows[start:start+batch_size]
-                print(f"[PROCESS] Processing batch {start//batch_size+1} (rows {start+1}-{start+len(batch)})")
-                for i, row_data in enumerate(batch):
-                    portal_row_index = i + 2
-                    print(f"[PROCESS] Filling portal row {portal_row_index} in batch...")
-                    self.fill_portal_row(row_data, portal_row_index)
-                print(f"[PROCESS] Batch {start//batch_size+1} loaded from Excel and filled in portal.")
-                self.submit_data()
-                print("[PROCESS] Data submitted to portal.")
-                
-                if self.handle_quantity_error_and_summary():
-                    print("[PROCESS] Quantity error handled. Stopping process.")
-                    return False
-                self.handle_confirmation_and_scrolling()
-                print("[PROCESS] Confirmation and scrolling handled.")
-                self.clear_portal_fields()
-            print("[PROCESS] All batches processed successfully.")
+            if total_rows == 0:
+                print("[PROCESS] No data to process.")
+                return False
+            # Always process only one row, index 2 (portal expects _ctl2 for first row)
+            row_data = self.excel_rows[0]
+            portal_row_index = 2
+            print(f"[PROCESS] Filling portal row {portal_row_index}...")
+            self.fill_portal_row(row_data, portal_row_index)
+            print("[PROCESS] Data filled in portal.")
+            # Lets attach Pdf first and Submit the data
+            self.upload_pdf()
+            print("[PROCESS] Data submitted to portal.")
+            self.ensure_window_visible()  # Ensure Chrome is visible before proceeding
+            if self.handle_quantity_error_and_summary():
+                print("[PROCESS] Quantity error handled. Stopping process.")
+                return False
+            self.handle_confirmation_and_scrolling()
+            print("[PROCESS] Confirmation and scrolling handled.")
+            self.clear_portal_fields()
+            print("[PROCESS] Process completed successfully.")
             return True
         except Exception as e:
             print(f"[PROCESS] Processing failed: {str(e)}")
