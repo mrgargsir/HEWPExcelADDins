@@ -119,11 +119,21 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 
 ---
 
-### #### 🌐 Web Enhancements (Second Tab: **`v6.50`**)
+### #### 🌐 BBS (Second Tab: **`BBS`**)
+
+**📤 Steel_BBS** – Get Steel Details
+
+#### 🔧 Features in the **BBS** Tab:
+
+1. **Footing Mesh** – Get Footing Mesh Steel.
+
+---
+
+### #### 🌐 Web Enhancements (Third Tab: **`v9.50`**)
 
 **📤 One-Click Uploader** – Interact directly with the HEWP Portal from Excel.
 
-#### 🔧 Features in the **v6.50** Tab:
+#### 🔧 Features in the **v9.50** Tab:
 
 1. **Auto Login to HEWP Portal** – Securely log in with saved credentials.
 2. **Close Chrome & Clean Resources** – Closes browser sessions and frees memory.
