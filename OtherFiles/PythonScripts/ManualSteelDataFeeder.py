@@ -210,13 +210,14 @@ class HEWPwritter:
             )
             print(f"[UPLOAD] Sending file path: {self.pdf_path}")
             file_input.send_keys(os.path.abspath(self.pdf_path))
+            time.sleep(1)  # Wait for upload to process
             print("[UPLOAD] Waiting for upload button")
             upload_button = self.wait.until(
                 EC.element_to_be_clickable((By.ID, "btn_add_Description"))
             )
             print("[SUBMIT] Found 'Add Items to List' button. Clicking...")
             upload_button.click()
-            time.sleep(1)
+            time.sleep(2)
             print("[UPLOAD] PDF upload completed")
         except Exception as e:
             print(f"[UPLOAD] File upload failed: {str(e)}")
@@ -270,11 +271,9 @@ class HEWPwritter:
                 # --- Set Plus/Minus dropdown based on product sign ---
                 try:
                     num = float(row_data.get('Number', 1) or 1)
-                    length = float(row_data.get('Length', 1) or 1)
-                    breadth = float(row_data.get('Breadth', 1) or 1)
-                    depth = float(row_data.get('Depth', 1) or 1)
+                    
                     Quantity = float(row_data.get('Quantity', 1) or 1)
-                    product = num * length * breadth * depth * Quantity
+                    product = num  * Quantity
                     ddl_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:ddlplusminus"
                     ddl_elem = driver.find_element(By.NAME, ddl_name)
                     if product < 0:
@@ -294,63 +293,16 @@ class HEWPwritter:
                 num_elem.send_keys(str(row_data.get('Number', '')))
                 print(f"[DEBUG] Number filled: {row_data.get('Number', '')}")
 
-            if unit == 'cum':
-                print(f"[DEBUG] Unit is 'cum' for row {row_index}. Filling Length, Breadth, Depth.")
-                if 'Length' in row_data:
-                    len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
-                    print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
-                    len_elem = driver.find_element(By.NAME, len_name)
-                    len_elem.clear()
-                    len_elem.send_keys(str(row_data.get('Length', '')))
-                    print(f"[DEBUG] Length filled: {row_data.get('Length', '')}")
-                if 'Breadth' in row_data:
-                    br_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtBreadth"
-                    print(f"[DEBUG] Filling Breadth for row {row_index} using name {br_name}")
-                    br_elem = driver.find_element(By.NAME, br_name)
-                    br_elem.clear()
-                    br_elem.send_keys(str(row_data.get('Breadth', '')))
-                    print(f"[DEBUG] Breadth filled: {row_data.get('Breadth', '')}")
-                if 'Depth' in row_data:
-                    dep_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtDepth"
-                    print(f"[DEBUG] Filling Depth for row {row_index} using name {dep_name}")
-                    dep_elem = driver.find_element(By.NAME, dep_name)
-                    dep_elem.clear()
-                    dep_elem.send_keys(str(row_data.get('Depth', '')))
-                    print(f"[DEBUG] Depth filled: {row_data.get('Depth', '')}")
-            elif unit == 'sqm':
-                print(f"[DEBUG] Unit is 'sqm' for row {row_index}. Filling Length, Breadth.")
-                if 'Length' in row_data:
-                    len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
-                    print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
-                    len_elem = driver.find_element(By.NAME, len_name)
-                    len_elem.clear()
-                    len_elem.send_keys(str(row_data.get('Length', '')))
-                    print(f"[DEBUG] Length filled: {row_data.get('Length', '')}")
-                if 'Breadth' in row_data:
-                    br_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtBreadth"
-                    print(f"[DEBUG] Filling Breadth for row {row_index} using name {br_name}")
-                    br_elem = driver.find_element(By.NAME, br_name)
-                    br_elem.clear()
-                    br_elem.send_keys(str(row_data.get('Breadth', '')))
-                    print(f"[DEBUG] Breadth filled: {row_data.get('Breadth', '')}")
-            elif unit == 'rm':
-                print(f"[DEBUG] Unit is 'rm' for row {row_index}. Filling Length.")
-                if 'Length' in row_data:
-                    len_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtLength"
-                    print(f"[DEBUG] Filling Length for row {row_index} using name {len_name}")
-                    len_elem = driver.find_element(By.NAME, len_name)
-                    len_elem.clear()
-                    len_elem.send_keys(str(row_data.get('Length', '')))
-                    print(f"[DEBUG] Length filled: {row_data.get('Length', '')}")
-            else:
-                print(f"[DEBUG] Unit is '{unit}' for row {row_index}. No Length/Breadth/Depth fields filled.")
-                if 'Quantity' in row_data:
-                    qty_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtqty"
-                    print(f"[DEBUG] Filling Quantity for row {row_index} using name {qty_name}")
-                    qty_elem = driver.find_element(By.NAME, qty_name)
-                    qty_elem.clear()
-                    qty_elem.send_keys(str(row_data['Quantity']))
-                    print(f"[DEBUG] Quantity filled: {row_data['Quantity']}")
+           
+            print(f"[DEBUG] Unit is '{unit}' for row {row_index}. No Length/Breadth/Depth fields filled.")
+            if 'Quantity' in row_data:
+                qty_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtqty"
+                print(f"[DEBUG] Filling Quantity for row {row_index} using name {qty_name}")
+                qty_elem = driver.find_element(By.NAME, qty_name)
+                qty_elem.clear()
+                qty_elem.send_keys(str(row_data['Quantity']))
+                print(f"[DEBUG] Quantity filled: {row_data['Quantity']}")
+
         except Exception as e:
             print(f"[ERROR] Failed to fill portal row {row_index}: {e!r}")
             import traceback
@@ -400,18 +352,23 @@ class HEWPwritter:
             print(f"[CLEAR] Error clearing portal fields: {e}")
 
     def load_selected_excel_data_no_headers(self):
-        self.ensure_excel_window_visible()
-        time.sleep(0.3)
+        # self.ensure_excel_window_visible()
+        time.sleep(0.5)
         print("[EXCEL] Reading Quantity from clipboard...")
         self._show_console()
         try:
             clipboard_text = pyperclip.paste().strip()
+            print(f"[DEBUG] Clipboard raw value: '{clipboard_text}'") 
             if not clipboard_text:
                 print("[EXCEL] Clipboard is empty.")
                 self.excel_rows = []
-                return
+                sys.exit(1)
             try:
                 quantity_val = round(float(clipboard_text),3)
+                if quantity_val == 0 :
+                    print("[EXCEL] Quantity is zero . Exiting script.")
+                    messagebox.showerror("Invalid Quantity", "Quantity must be a non-zero number.")
+                    sys.exit(1)
             except Exception:
                 print(f"[EXCEL] Clipboard value '{clipboard_text}' is not a valid number.")
                 self.excel_rows = []
@@ -422,10 +379,8 @@ class HEWPwritter:
             self.excel_rows = [{
                 'Description': "Steel Weight (PFA)",
                 'Number': 1,
-                'Quantity': quantity_val,
-                'Length': 0,
-                'Breadth': 0,
-                'Depth': 0
+                'Quantity': quantity_val
+                
             }]
             print("[EXCEL] Single row prepared for portal entry.")
         except Exception as e:
@@ -651,8 +606,11 @@ class HEWPwritter:
             row_data = self.excel_rows[0]
             portal_row_index = 2
             print(f"[PROCESS] Filling portal row {portal_row_index}...")
+            self.ensure_window_visible()
+            time.sleep(0.1)
             self.fill_portal_row(row_data, portal_row_index)
             print("[PROCESS] Data filled in portal.")
+            time.sleep(0.5)
             # Lets attach Pdf first and Submit the data
             self.upload_pdf()
             print("[PROCESS] Data submitted to portal.")

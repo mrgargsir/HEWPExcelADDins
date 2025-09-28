@@ -608,6 +608,9 @@ class HEWPUploader:
                     if not valid_options:
                         break  # No valid options to select
                     chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                    if chosen_value is None:
+                                print("[EXIT] User cancelled dropdown selection. Exiting script.")
+                                sys.exit(1) 
                     if chosen_value:
                         self.driver.execute_script(
                             "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
@@ -626,6 +629,9 @@ class HEWPUploader:
                         if not next_valid_options:
                             prompt_text = f"Last selection was not valid!\nSelect {label}:"
                             chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                            if chosen_value is None:
+                                print("[EXIT] User cancelled dropdown selection. Exiting script.")
+                                sys.exit(1) 
                             if chosen_value:
                                 self.driver.execute_script(
                                     "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
@@ -637,6 +643,9 @@ class HEWPUploader:
                     except Exception:
                         prompt_text = f"Last selection was not valid!\nSelect {label}:"
                         chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                        if chosen_value is None:
+                                print("[EXIT] User cancelled dropdown selection. Exiting script.")
+                                sys.exit(1) 
                         if chosen_value:
                             self.driver.execute_script(
                                 "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
@@ -654,6 +663,9 @@ class HEWPUploader:
                         if not rate_type_valid_options:
                             prompt_text = f"Last selection was not valid!\nSelect {label}:"
                             chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                            if chosen_value is None:
+                                print("[EXIT] User cancelled dropdown selection. Exiting script.")
+                                sys.exit(1) 
                             if chosen_value:
                                 self.driver.execute_script(
                                     "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
@@ -665,6 +677,9 @@ class HEWPUploader:
                     except Exception:
                         prompt_text = f"Last selection was not valid!\nSelect {label}:"
                         chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
+                        if chosen_value is None:
+                                print("[EXIT] User cancelled dropdown selection. Exiting script.")
+                                sys.exit(1) 
                         if chosen_value:
                             self.driver.execute_script(
                                 "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
