@@ -302,10 +302,10 @@ class HEWPUploader:
                 for option in options:
                     if item_number in option.text:
                         option.click()
+                        time.sleep(1)
                         break
                 else:
                     raise ValueError(f"Item '{item_number}' not found in dropdown")
-                time.sleep(1)
                 print(f"[SELECT] Item '{item_number}' selected from dropdown.")
                 return  # Success, exit function
 
@@ -323,10 +323,30 @@ class HEWPUploader:
                     button = btn
                     break
             if txthsrno.get_attribute("id") == "txthsrno" and "txthsrno" in txthsrno.get_attribute("name") and button:
+                print(f"[STEP] Clearing and entering item number '{item_number}' in textbox.")
                 txthsrno.clear()
                 txthsrno.send_keys(item_number)
                 button.click()
                 time.sleep(1)
+
+                # Check for Chrome confirmation dialog with OK button
+                print("[STEP] Checking for confirmation dialog after item search...")
+                try:
+                    # Try to handle JavaScript alert
+                    alert = self.driver.switch_to.alert
+                    dialog_text = alert.text
+                    print(f"[STEP] Alert text: {dialog_text}")
+                    if "Invalid Item" in dialog_text:
+                        print("[ERROR] Invalid Item dialog detected. Exiting script.")
+                        alert.accept()
+                        print("Invalid Item", "The item selection is invalid. Exiting.")
+                        sys.exit(1)
+                    else:
+                        print("[STEP] Confirmation dialog did not indicate error. Closing dialog.")
+                        alert.accept()
+                except Exception:
+                    print(f"[STEP] No website dialog found")
+
                 print(f"[SELECT] Item '{item_number}' searched using textbox+button.")
                 return  # Success, exit function
 
@@ -340,7 +360,6 @@ class HEWPUploader:
         except RuntimeError as e:
             # End automation if selection UI is not found
             messagebox.showerror("Automation Stopped", str(e))
-            self.close()
             sys.exit(1)
         except Exception as e:
             messagebox.showerror("Selection Error", f"Could not select item: {str(e)}")

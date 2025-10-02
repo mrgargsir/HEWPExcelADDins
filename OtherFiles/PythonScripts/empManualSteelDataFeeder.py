@@ -232,11 +232,13 @@ class HEWPwritter:
         try:
             print(f"[DEBUG] Locating unit element for row {row_index}...")
             #unit_elem = driver.find_element(By.ID, 'lbltobeexecutedunit')
-            unit_elem = wait.until(EC.visibility_of_element_located((By.ID, 'lbltobeexecutedunit')))
+            # Unit is for Estimate in Employee Portal
+            unit_elem = wait.until(EC.visibility_of_element_located((By.ID, 'unit')))
             unit = unit_elem.text.strip().lower()
             print(f"[DEBUG] Unit for row {row_index}: {unit}")
 
             if 'Description' in row_data:
+                # _ctl0:maincontentcm:GV_ADD_to_List:_ctl2:txtdescription
                 desc_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:txtdescription"
                 print(f"[DEBUG] Filling Description for row {row_index} using name {desc_name}")
                 desc_elem = wait.until(EC.presence_of_element_located((By.NAME, desc_name)))
@@ -250,6 +252,7 @@ class HEWPwritter:
                     
                     Quantity = float(row_data.get('Quantity', 1) or 1)
                     product = num  * Quantity
+                    #_ctl0:maincontentcm:GV_ADD_to_List:_ctl2:ddlplusminus
                     ddl_name = f"_ctl0:maincontentcm:GV_ADD_to_List:{suffix}:ddlplusminus"
                     ddl_elem = driver.find_element(By.NAME, ddl_name)
                     if product < 0:
@@ -278,6 +281,7 @@ class HEWPwritter:
                 qty_elem.clear()
                 qty_elem.send_keys(str(row_data['Quantity']))
                 print(f"[DEBUG] Quantity filled: {row_data['Quantity']}")
+
 
         except Exception as e:
             print(f"[ERROR] Failed to fill portal row {row_index}: {e!r}")
@@ -353,7 +357,7 @@ class HEWPwritter:
             print(f"[EXCEL] Quantity read from clipboard: {quantity_val}")
             # Prepare single row data
             self.excel_rows = [{
-                'Description': "Steel Weight (PFA)",
+                'Description': "Steel Weight as Per BBS)",
                 'Number': 1,
                 'Quantity': quantity_val
                 
@@ -364,7 +368,7 @@ class HEWPwritter:
             self.excel_rows = []
 
     def submit_data(self): 
-        """Click 'Add Items to List' button after filling row data"""
+        """Click 'Add HSR Item to List' button after filling row data"""
         driver = self.driver
         wait = self.wait
         print("[SUBMIT] Attempting to submit data to portal...")
@@ -418,23 +422,24 @@ class HEWPwritter:
                         document.querySelector('button[data-bs-dismiss="modal"]')?.click();
                         await wait(500);
                         
-                        // Handle rblitemshsr_1
-                        const r = document.getElementById('rblitemshsr_1');
+                        // Handle lnkEdit_POP scroll
+                        const r = document.getElementById('btndelete');
                         if (r) {
-                            r.click();
                             r.scrollIntoView({behavior: 'instant', block: 'start'});
                             await wait(200);
                         }
                         
                         // Scroll to Description Details
-                        const hs = document.querySelectorAll('.cust-card-heading h4');
-                        for (const h of hs) {
-                            const t = h.textContent.trim();
-                            if (t === 'Description Details' || t.includes('Description Details')) {
-                                h.scrollIntoView({behavior: 'instant', block: 'start'});
-                                break;
-                            }
+                        // Scroll to Delete Selected Items button
+                        const delBtn = document.getElementById('btndelete');
+                        if (delBtn) {
+                            delBtn.scrollIntoView({behavior: 'instant', block: 'start'});
                         }
+                                       
+                        // Close modal
+                        document.querySelector('button[data-bs-dismiss="modal"]')?.click();
+                        await wait(500);
+                                       
                     })();
                 })();
             """)
@@ -504,27 +509,25 @@ class HEWPwritter:
                 self.driver.execute_script("""
                                            
                     // Scroll to Description Details
-                        const hs = document.querySelectorAll('.cust-card-heading h4');
-                        for (const h of hs) {
-                            const t = h.textContent.trim();
-                            if (t === 'Description Details' || t.includes('Description Details')) {
-                                h.scrollIntoView({behavior: 'instant', block: 'start'});
-                                break;
-                            }
+                    // Scroll to Delete Selected Items button
+                    const delBtn = document.getElementById('btndelete');
+                        if (delBtn) {
+                            delBtn.scrollIntoView({behavior: 'instant', block: 'start'});
+                            break;
                         }
                                            
                     // Get elements for To Be Executed
-                    const v = document.getElementById('lbltobeexecuted');
-                    const u = document.getElementById('lbltobeexecutedunit');
+                    const v = document.getElementById('lblGrand_Qty');
+                    const u = document.getElementById('unit');
                     
                     // Get elements for Already Executed
-                    const executedQtyElem = document.getElementById('lblexecuted');
-                    const executedUnitElem = document.getElementById('lblexecutedunit');
+                    const executedQtyElem = document.getElementById('lblGrand_Qty');
+                    const executedUnitElem = document.getElementById('unit');
                     
                     // Get Table Qty (Grand Qty)
                     const grandQtyElem = document.getElementById('lblGrand_Qty');
                     
-                    if (!v || !u || !executedQtyElem || !executedUnitElem ) {
+                    if (!v || !u  ) {
                         alert('Required fields not found. Contact @mrgargsir.');
                         return;
                     }
@@ -551,14 +554,10 @@ class HEWPwritter:
                     const pendingQty = (parseFloat(remainingQty) - grandQty).toFixed(3);
                     
                     const msg = `
-                    🚨 **Extra Quantity Alert** 🚨
+                    🚨 **Quantity Detail** 🚨
                 ⚖️ DNIT QTY          = ${dn} ${unit}
                 ➕ ALLOWANCE (25%)  = ${al} ${unit}
                 ✅ TOTAL            = ${total} ${unit}
-                ➖ EXECUTED QTY    = ${executedQty} ${unit}
-                📌 REMAINING QTY   = ${remainingQty} ${unit}
-                ➖ TABLE QTY       = ${grandQty} ${unit}
-                🔄 PENDING QTY     = ${pendingQty} ${unit}
                     `;
                     
                     try {

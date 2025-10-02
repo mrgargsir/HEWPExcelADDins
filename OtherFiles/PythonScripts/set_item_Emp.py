@@ -412,6 +412,25 @@ class HEWPUploader:
                 txthsrno.send_keys(item_number)
                 button.click()
                 time.sleep(1)
+                
+                # Check for Chrome confirmation dialog with OK button
+                print("[STEP] Checking for confirmation dialog after item search...")
+                try:
+                    # Try to handle JavaScript alert
+                    alert = self.driver.switch_to.alert
+                    dialog_text = alert.text
+                    print(f"[STEP] Alert text: {dialog_text}")
+                    if "Invalid Item" in dialog_text:
+                        print("[ERROR] Invalid Item dialog detected. Exiting script.")
+                        alert.accept()
+                        print("Invalid Item", "The item selection is invalid. Exiting.")
+                        sys.exit(1)
+                    else:
+                        print("[STEP] Confirmation dialog did not indicate error. Closing dialog.")
+                        alert.accept()
+                except Exception:
+                    print(f"[STEP] No website dialog found")
+
                 print(f"[SELECT] Item '{item_number}' searched using textbox+button.")
                 return  # Success, exit function
 

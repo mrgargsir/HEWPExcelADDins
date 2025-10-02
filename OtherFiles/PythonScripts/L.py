@@ -205,15 +205,18 @@ class HEWPUploader:
 
         
         copy_btn = self.driver.find_elements(By.ID, "btnclear")
+        time.sleep(0.1)
         if copy_btn and copy_btn[0].is_displayed():
             copy_btn[0].click()
             # Wait for the close button to be visible and clickable
             close_btn = self.wait.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.btn.theme-btn--red[data-bs-dismiss="modal"]'))
             )
+            time.sleep(0.2)
             self.driver.execute_script("arguments[0].scrollIntoView(true);", close_btn)
             time.sleep(0.1)  # Let any animation finish
             close_btn.click()
+            time.sleep(0.5)
 
         time.sleep(0.1)  # Wait for page to reload
 
@@ -222,6 +225,7 @@ class HEWPUploader:
             self.driver.execute_script("arguments[0].scrollIntoView(true);", close_btn[0])
             time.sleep(0.1)  # Let any animation finish
             close_btn[0].click()
+            time.sleep(0.5)
 
 
         try:
@@ -236,6 +240,7 @@ class HEWPUploader:
                 and modal_button.get_attribute("type") == "button"
             ):
                 print("[UPLOAD] Clicking modal button.")
+                time.sleep(0.1)
                 modal_button.click()
             else:
                 raise Exception("Modal button does not match expected attributes")
@@ -251,6 +256,7 @@ class HEWPUploader:
                 and file_input.get_attribute("name") == "_ctl0:maincontentcm:FileUploadexcel"
             ):
                 print(f"[UPLOAD] Sending file path: {self.excel_file_path}")
+                time.sleep(0.2)
                 file_input.send_keys(os.path.abspath(self.excel_file_path))
             else:
                 raise Exception("File input does not match expected attributes")
@@ -268,7 +274,31 @@ class HEWPUploader:
                 and upload_button.get_attribute("value") == "Upload"
             ):
                 print("[UPLOAD] Clicking upload button.")
+                time.sleep(0.2)
                 upload_button.click()
+                time.sleep(2)  # Wait for upload to process
+                
+                # Check for Chrome confirmation dialog with OK button
+                print("[STEP] Checking for confirmation dialog after upload...")
+                try:
+                    # Try to handle JavaScript alert
+                    alert = self.driver.switch_to.alert
+                    dialog_text = alert.text
+                    print(f"[STEP] Alert text: {dialog_text}")
+
+                    #Format of Downloaded file and Uploaded File are not same. Please upload correct file
+                    if "not same" in dialog_text.lower() or "upload correct file" in dialog_text.lower():
+                        print("[ERROR] File format mismatch detected. Exiting script.")
+                        alert.accept()
+                        print( "Please upload correct Template file.") 
+                        sys.exit(1)
+                    elif "microsoft" in dialog_text.lower() or "error" in dialog_text.lower():
+                        print("[ERROR] Website Error detected. Exiting script.")
+                        alert.accept()
+                        print( "Its Website Error, No worry. run again later") 
+                        sys.exit(1)
+                except Exception:
+                    print(f"[STEP] No website dialog found")
             else:
                 raise Exception("Upload button does not match expected attributes")
 
@@ -276,7 +306,6 @@ class HEWPUploader:
             time.sleep(1)
         except Exception as e:
             print(f"[UPLOAD] File upload failed: {str(e)}")
-            
             sys.exit(1)
 
     def copy_excel_data(self):
@@ -300,6 +329,7 @@ class HEWPUploader:
                     copy_btn[0].get_attribute("value") == "Copy Excel Data"
                 ):
                     print("[COPY] Clicking btncopyexcel.")
+                    time.sleep(0.2)
                     copy_btn[0].click()
                 else:
                     raise Exception("Not this Copy button (btncopyexcel)")
@@ -316,6 +346,7 @@ class HEWPUploader:
                         and modal_button.get_attribute("type") == "button"
                     ):
                         print("[COPY] Clicking modal button for Button6.")
+                        time.sleep(0.1)
                         modal_button.click()
                         time.sleep(0.5)  # Give time for modal to appear
                 except Exception as e:
@@ -328,6 +359,7 @@ class HEWPUploader:
                     copy_btn[0].get_attribute("value") == "Copy Excel Data"
                 ):
                     print("[COPY] Clicking Button6.")
+                    time.sleep(0.2)
                     copy_btn[0].click()
                 else:
                     raise Exception("Copy button does not match expected attributes (Button6)")

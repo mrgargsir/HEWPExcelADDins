@@ -217,6 +217,7 @@ class HEWPUploader:
             print("[UPLOAD] Clicking upload button")
             upload_button.click()
             time.sleep(1)
+            
             print("[UPLOAD] PDF upload completed")
         except Exception as e:
             print(f"[UPLOAD] File upload failed: {str(e)}")
