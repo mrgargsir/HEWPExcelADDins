@@ -277,7 +277,7 @@ class HEWPUploader:
         except Exception as e:
             print(f"[UPLOAD] File upload failed: {str(e)}")
             
-            raise
+            sys.exit(1)
 
     def copy_excel_data(self):
         """Copy data from Excel"""
@@ -338,7 +338,7 @@ class HEWPUploader:
         except Exception as e:
             print(f"[COPY] Data copy failed: {str(e)}")
            
-            raise
+            sys.exit(1)
 
     def handle_confirmation_and_scrolling(self):
         """EXACT implementation as you specified"""
@@ -374,7 +374,11 @@ class HEWPUploader:
                         // Close modal
                         document.querySelector('button[data-bs-dismiss="modal"]')?.click();
                         await wait(500);
-                        
+                                       
+                        // Close modal
+                        document.querySelector('button[data-bs-dismiss="modal"]')?.click();
+                        await wait(500);
+                                       
                         // Handle rblitemshsr_1
                         const r = document.getElementById('rblitemshsr_1');
                         if (r) {
@@ -392,6 +396,11 @@ class HEWPUploader:
                                 break;
                             }
                         }
+                                       
+                        // Close modal
+                        await wait(500);
+                        document.querySelector('button[data-bs-dismiss="modal"]')?.click();
+                        
                     })();
                 })();
             """)
@@ -535,7 +544,7 @@ class HEWPUploader:
             # Handle quantity error and summary after both steps
             if self.handle_quantity_error_and_summary():
                 print("[PROCESS] Quantity error handled. Stopping process.")
-                return False  # Stop further processing if error handled
+                sys.exit(1)  # Stop further processing if error handled
             
             # IF no error, proceed with confirmation and scrolling
             self.handle_confirmation_and_scrolling()
@@ -546,7 +555,7 @@ class HEWPUploader:
         except Exception as e:
             print(f"[PROCESS] Processing failed: {str(e)}")
             
-            return False
+            sys.exit(1)
         finally:
             print("[PROCESS] Cleaning up resources...")
             self.close()

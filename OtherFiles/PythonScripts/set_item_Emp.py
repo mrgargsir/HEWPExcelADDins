@@ -24,6 +24,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import ElementClickInterceptedException, ElementNotInteractableException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+import time
 
 class HEWPUploader:
     def __init__(self):
@@ -215,7 +217,12 @@ class HEWPUploader:
         y = ((win.winfo_screenheight()//7) *6) - (height ) -10
         win.geometry(f"+{x}+{y}")
         # Auto-close after timeout ms
-        win.after(timeout, win.destroy)
+        # Auto-close after timeout ms
+        def close_win():
+            win.destroy()
+            root.quit()  # <-- Add this line
+
+        win.after(timeout, close_win)
         win.mainloop()
         root.destroy()
 
@@ -384,6 +391,7 @@ class HEWPUploader:
                 else:
                     raise ValueError(f"Item '{item_number}' not found in dropdown")
                 time.sleep(1)
+                print(f"[SELECT] Item '{item_number}' selected from dropdown.")
                 return  # Success, exit function
 
             # Fallback to textbox+button (always available)
@@ -404,6 +412,7 @@ class HEWPUploader:
                 txthsrno.send_keys(item_number)
                 button.click()
                 time.sleep(1)
+                print(f"[SELECT] Item '{item_number}' searched using textbox+button.")
                 return  # Success, exit function
 
             # If neither worked, show error
@@ -517,7 +526,7 @@ class HEWPUploader:
             result["value"] = None
             win.destroy()
             root.quit()
-            sys.exit(0)
+            sys.exit(1)
 
         # Bind Enter and Esc keys
         win.bind('<Return>', on_ok)
@@ -561,14 +570,18 @@ class HEWPUploader:
         idx = 0
         while idx < len(dropdowns):
             dropdown_id, label = dropdowns[idx]
+            print(f"[STEP] Processing dropdown: {label} (ID: {dropdown_id})")
             try:
                 select_elem = self.driver.find_element(By.ID, dropdown_id)
+                print(f"[STEP] Found dropdown: {dropdown_id}")
             except Exception:
+                print(f"[STEP] Dropdown not found: {dropdown_id}, skipping...")
                 idx += 1
                 continue  # If dropdown not present, skip
 
             while True:
                 valid_options = self._get_valid_options(select_elem)
+                print(f"[STEP] Valid options for {dropdown_id}: {len(valid_options)} found")
                 selected_value = select_elem.get_attribute("value")
                 try:
                     selected_text = select_elem.find_element(By.CSS_SELECTOR, "option:checked").text.strip()
@@ -577,6 +590,7 @@ class HEWPUploader:
 
                 # For Premium Date, always select the latest (max) date value (format: DD/MM/YYYY)
                 if dropdown_id == "ddlPremiumDate" and valid_options:
+                    print("[STEP] Selecting latest Premium Date")
                     from datetime import datetime
                     def parse_date(text):
                         try:
@@ -585,33 +599,68 @@ class HEWPUploader:
                             return datetime.min
                     latest_option = max(valid_options, key=lambda opt: parse_date(opt[1]))
                     latest_value = latest_option[0]
+                    print(f"[STEP] Latest Premium Date value: {latest_value}")
                     self.driver.execute_script(
                         "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
                         select_elem, latest_value
                     )
                     time.sleep(1)
+
+                    # Accept any unexpected alert if present
+                    try:
+                        alert = self.driver.switch_to.alert
+                        print(f"[STEP] Alert detected: {alert.text}")
+                        alert.accept()
+                        print("[STEP] Alert accepted.")
+                        time.sleep(1)
+                    except Exception:
+                        print("[STEP] No alert present.")
+
+                    # --- Handle Chrome notification with OK button ---
+                    try:
+                        print("[STEP] Checking for Chrome notification OK button...")
+                        # Wait up to 2 seconds for a notification dialog with an OK button
+                        ok_button = WebDriverWait(self.driver, 2).until(
+                            EC.element_to_be_clickable((By.XPATH, "//input[@type='button' and (translate(@value,'ok','OK')='OK' or translate(@value,'ok','OK')='Ok')]"))
+                        )
+                        ok_button.click()
+                        print("[INFO] Chrome notification OK button clicked.")
+                        time.sleep(1)
+                    except TimeoutException:
+                        print("[STEP] No Chrome notification appeared.")
+                        pass  # No notification appeared
+
+
+
                     # After selecting, check if next dropdown has valid options
                     if idx + 1 < len(dropdowns):
                         next_id, next_label = dropdowns[idx + 1]
                         try:
                             next_elem = self.driver.find_element(By.ID, next_id)
                             next_valid_options = self._get_valid_options(next_elem)
+                            print(f"[STEP] Next dropdown {next_id} valid options: {len(next_valid_options)}")
                             if not next_valid_options:
+                                print(f"[STEP] No valid options in next dropdown ({next_id}), prompting again for current.")
                                 continue  # Prompt again for current
                         except Exception:
+                            print(f"[STEP] Next dropdown {next_id} not found, prompting again for current.")
                             continue  # Prompt again for current
+                    print(f"[STEP] Premium Date selection complete, moving to next dropdown.")
                     break  # Move to next dropdown
 
                 need_prompt = not selected_value or selected_text.lower() == "select one" or not selected_text
                 prompt_text = f"Select {label}:"
                 if need_prompt:
+                    print(f"[STEP] Prompting user for dropdown: {label}")
                     if not valid_options:
+                        print(f"[STEP] No valid options to select for {label}, breaking.")
                         break  # No valid options to select
                     chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
                     if chosen_value is None:
                                 print("[EXIT] User cancelled dropdown selection. Exiting script.")
                                 sys.exit(1) 
                     if chosen_value:
+                        print(f"[STEP] User selected value: {chosen_value} for {label}")
                         self.driver.execute_script(
                             "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
                             select_elem, chosen_value
@@ -626,13 +675,16 @@ class HEWPUploader:
                     try:
                         next_elem = self.driver.find_element(By.ID, next_id)
                         next_valid_options = self._get_valid_options(next_elem)
+                        print(f"[STEP] Next dropdown {next_id} valid options: {len(next_valid_options)}")
                         if not next_valid_options:
+                            print(f"[STEP] No valid options in next dropdown ({next_id}), prompting again for current.")
                             prompt_text = f"Last selection was not valid!\nSelect {label}:"
                             chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
                             if chosen_value is None:
                                 print("[EXIT] User cancelled dropdown selection. Exiting script.")
                                 sys.exit(1) 
                             if chosen_value:
+                                print(f"[STEP] User selected value: {chosen_value} for {label} (after invalid next dropdown)")
                                 self.driver.execute_script(
                                     "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
                                     select_elem, chosen_value
@@ -641,12 +693,14 @@ class HEWPUploader:
                             select_elem = self.driver.find_element(By.ID, dropdown_id)
                             continue  # Prompt again for current
                     except Exception:
+                        print(f"[STEP] Next dropdown {next_id} not found, prompting again for current.")
                         prompt_text = f"Last selection was not valid!\nSelect {label}:"
                         chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
                         if chosen_value is None:
                                 print("[EXIT] User cancelled dropdown selection. Exiting script.")
                                 sys.exit(1) 
                         if chosen_value:
+                            print(f"[STEP] User selected value: {chosen_value} for {label} (after invalid next dropdown)")
                             self.driver.execute_script(
                                 "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
                                 select_elem, chosen_value
@@ -657,16 +711,20 @@ class HEWPUploader:
 
                 # Only after the last dropdown, check Rate_Type for valid options
                 elif idx == len(dropdowns) - 1:
+                    print("[STEP] Last dropdown reached, checking Rate_Type options.")
                     try:
                         rate_type_elem = self.driver.find_element(By.ID, "ddlRate_Type")
                         rate_type_valid_options = self._get_valid_options(rate_type_elem)
+                        print(f"[STEP] Rate_Type valid options: {len(rate_type_valid_options)}")
                         if not rate_type_valid_options:
+                            print(f"[STEP] No valid Rate_Type options, prompting again for current dropdown ({dropdown_id})")
                             prompt_text = f"Last selection was not valid!\nSelect {label}:"
                             chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
                             if chosen_value is None:
                                 print("[EXIT] User cancelled dropdown selection. Exiting script.")
                                 sys.exit(1) 
                             if chosen_value:
+                                print(f"[STEP] User selected value: {chosen_value} for {label} (after invalid Rate_Type)")
                                 self.driver.execute_script(
                                     "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
                                     select_elem, chosen_value
@@ -675,12 +733,14 @@ class HEWPUploader:
                             select_elem = self.driver.find_element(By.ID, dropdown_id)
                             continue  # Prompt again for current
                     except Exception:
+                        print(f"[STEP] Rate_Type dropdown not found, prompting again for current dropdown ({dropdown_id})")
                         prompt_text = f"Last selection was not valid!\nSelect {label}:"
                         chosen_value = self._prompt_dropdown(label, prompt_text, valid_options)
                         if chosen_value is None:
                                 print("[EXIT] User cancelled dropdown selection. Exiting script.")
                                 sys.exit(1) 
                         if chosen_value:
+                            print(f"[STEP] User selected value: {chosen_value} for {label} (after invalid Rate_Type)")
                             self.driver.execute_script(
                                 "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
                                 select_elem, chosen_value
@@ -688,29 +748,55 @@ class HEWPUploader:
                             time.sleep(1)
                         select_elem = self.driver.find_element(By.ID, dropdown_id)
                         continue  # Prompt again for current
-
+                print(f"[STEP] Selection for {label} complete, moving to next dropdown.")
                 break  # Only break if all checks above pass
             idx += 1
+        print("[STEP] All dropdowns processed.")
+
 
     def select_rate_type_with_script(self, rate_type=None):
         """Select Rate Type using Selenium, handling all dropdown dependencies."""
-        from selenium.common.exceptions import NoSuchElementException
-        import time
+        
 
         try:
             # Ensure all upper dropdowns are selected
             self.select_dropdowns_in_order()
 
+            time.sleep(0.1)
+
             # Now handle Rate Type dropdown
             while True:
+                # Accept any unexpected alert if present
+                try:
+                    alert = self.driver.switch_to.alert
+                    print(f"[STEP] Alert detected in rate_type_with_script Method: {alert.text}")
+                    alert.accept()
+                    print("[STEP] Alert accepted. in rate_type_with_script Method")
+                    time.sleep(1)
+                except Exception:
+                    print("[STEP] No alert present.in rate_type_with_script Method")    
+
                 try:
                     # Always re-find the dropdown after any page reload
                     rate_type_select = self.driver.find_element(By.ID, "ddlRate_Type")
+                    print("FOUND Rate_Type dropdown IN LAST METHOD.")
                 except NoSuchElementException:
                     print("Rate_Type dropdown not found, skipping Rate Type selection.")
                     return
-
+                
+                # Always re-find the dropdown after any page reload
+                rate_type_select = self.driver.find_element(By.ID, "ddlRate_Type")
                 options = self._get_valid_options(rate_type_select)
+            
+                # try:
+                #     # Always re-find the dropdown after any page reload
+                #     rate_type_select = self.driver.find_element(By.ID, "ddlRate_Type")
+                #     options = self._get_valid_options(rate_type_select)
+                # except (NoSuchElementException, StaleElementReferenceException):
+                #     print("Rate_Type dropdown not found or stale, retrying...")
+                #     time.sleep(1)
+                #     continue  # Try again
+
                 if not options:
                     # No valid Rate Type options, so re-run dropdown selection and try again
                     messagebox.showinfo(
@@ -733,6 +819,7 @@ class HEWPUploader:
                                 rate_type_select, value
                             )
                             selected = True
+                            print("Selected Rate_Type dropdown IN LAST METHOD.")
                             break
                     if selected:
                         break
@@ -743,8 +830,11 @@ class HEWPUploader:
                         "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('change'));",
                         rate_type_select, options[0][0]
                     )
+                    print("Selected First Rate_Type dropdown IN LAST METHOD.")
 
                 # Highlight for feedback
+                # Always re-find the dropdown after any page reload
+                rate_type_select = self.driver.find_element(By.ID, "ddlRate_Type")
                 self.driver.execute_script(
                     "arguments[0].style.outline='3px solid orange'; arguments[0].style.backgroundColor='#bf360c';",
                     rate_type_select
@@ -759,7 +849,8 @@ class HEWPUploader:
             self.auto_close_info("Item Selection", "Item selection complete.", timeout=1000)
         except Exception as e:
             print(f"Error in select_rate_type_with_script: {e}")
-
+            sys.exit(1)
+    
     def ensure_subhead_selected(self):
         """Ensure the 'Name of Template' (ddlsubhead) dropdown is selected, prompting user if needed.
         If not present, navigate to the correct page using menu clicks."""
@@ -909,7 +1000,7 @@ class HEWPUploader:
             
         except Exception as e:
             messagebox.showerror("Error", f"Processing failed:\n{str(e)}")
-            return False
+            sys.exit(1)
         finally:
             pass
 

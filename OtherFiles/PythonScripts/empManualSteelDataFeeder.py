@@ -199,30 +199,6 @@ class HEWPwritter:
         except Exception as e:
             print(f"Window management warning: {str(e)}")
 
-    def upload_pdf(self):
-        """Selenium-only file upload approach"""
-        print("[UPLOAD] Starting PDF upload process")
-        self.ensure_window_visible()
-        try:
-            print("[UPLOAD] Waiting for file input element")
-            file_input = self.wait.until(
-                EC.presence_of_element_located((By.ID, "FileUpload3"))
-            )
-            print(f"[UPLOAD] Sending file path: {self.pdf_path}")
-            file_input.send_keys(os.path.abspath(self.pdf_path))
-            time.sleep(1)  # Wait for upload to process
-            print("[UPLOAD] Waiting for upload button")
-            upload_button = self.wait.until(
-                EC.element_to_be_clickable((By.ID, "btn_add_Description"))
-            )
-            print("[SUBMIT] Found 'Add Items to List' button. Clicking...")
-            upload_button.click()
-            time.sleep(2)
-            print("[UPLOAD] PDF upload completed")
-        except Exception as e:
-            print(f"[UPLOAD] File upload failed: {str(e)}")
-            messagebox.showerror("Upload Error", f"File upload failed: {str(e)}")
-            raise
 
     def ensure_excel_window_visible(self):
         """Ensure Excel window is open and visible, else show error and exit."""
@@ -387,7 +363,21 @@ class HEWPwritter:
             print(f"[EXCEL] Failed to read clipboard data: {e}")
             self.excel_rows = []
 
-    
+    def submit_data(self): 
+        """Click 'Add Items to List' button after filling row data"""
+        driver = self.driver
+        wait = self.wait
+        print("[SUBMIT] Attempting to submit data to portal...")
+        try:
+            add_btn = driver.find_element(By.ID, 'btn_add_Description')
+            print("[SUBMIT] Found 'Add Items to List' button. Clicking...")
+            add_btn.click()
+            # wait.until(EC.invisibility_of_element_located((By.ID, 'loadingSpinner')))
+            time.sleep(0.5)  # Wait for any animations to finish
+            print("[SUBMIT] Row added to portal.")
+            print("[SUBMIT] Row submitted to portal.")
+        except Exception as e:
+            print(f"[SUBMIT] Failed to submit row: {e}")
 
     def handle_confirmation_and_scrolling(self):
         """EXACT implementation as you specified"""
@@ -615,8 +605,8 @@ class HEWPwritter:
             self.fill_portal_row(row_data, portal_row_index)
             print("[PROCESS] Data filled in portal.")
             time.sleep(0.5)
-            # Lets attach Pdf first and Submit the data
-            self.upload_pdf()
+            # Lets no attach Pdf first and Submit the data
+            self.submit_data()
             print("[PROCESS] Data submitted to portal.")
             self.ensure_window_visible()  # Ensure Chrome is visible before proceeding
             if self.handle_quantity_error_and_summary():

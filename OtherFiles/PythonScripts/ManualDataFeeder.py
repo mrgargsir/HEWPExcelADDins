@@ -552,6 +552,10 @@ class HEWPwritter:
                         document.querySelector('button[data-bs-dismiss="modal"]')?.click();
                         await wait(500);
                         
+                        // Close modal
+                        document.querySelector('button[data-bs-dismiss="modal"]')?.click();
+                        await wait(500);
+                                       
                         // Handle rblitemshsr_1
                         const r = document.getElementById('rblitemshsr_1');
                         if (r) {
