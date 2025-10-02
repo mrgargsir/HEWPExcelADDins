@@ -129,11 +129,11 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 
 ---
 
-### #### 🌐 Web Enhancements (Third Tab: **`v9.50`**)
+### #### 🌐 Web Enhancements (Third Tab: **`v9.60`**)
 
 **📤 One-Click Uploader** – Interact directly with the HEWP Portal from Excel.
 
-#### 🔧 Features in the **v9.50** Tab:
+#### 🔧 Features in the **v9.60** Tab:
 
 1. **Auto Login to HEWP Portal** – Securely log in with saved credentials.
 2. **Close Chrome & Clean Resources** – Closes browser sessions and frees memory.
@@ -146,7 +146,16 @@ Enhance your Excel experience with powerful tools tailored for civil engineering
 9. **Website Data Scraper** – Download completed bill data from the portal in Excel Format, including a summary sheet.
 10. **Delete Bill Data** – Remove all previously filled bill data items in one click on portal.
 11. **Copy Data to Template** – Automatically transfers data into the HEWP Excel template without unit conversion.
-12. **Auto Upload Full Bill/Template** – Automatically upload The Whole Bill.
+
+---
+
+### #### 🌐 Web Enhancements (Fourth Tab: **`WebAutoTools`**)
+
+**📤 One-Click Uploader** – Interact directly with the HEWP Portal from Excel.
+
+#### 🔧 Features in the **WebAutoTools** Tab:
+
+1. **Auto Upload Full Bill/Template** – Automatically upload The Whole Bill for all Users.
 
 
 ---
